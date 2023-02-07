@@ -1,0 +1,85 @@
+---
+title: "Assignment 1"
+author: "Annie Liu"
+date: "2023-02-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Installing Packages Needed to Look for Data
+
+We will be installing BiocManager and GEOmetadb in order to look for quality datasets. We will also be setting up GEOmetadb
+
+```{r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+if (!requireNamespace("GEOmetadb", quietly = TRUE))
+    BiocManager::install("GEOmetadb")
+
+if(!file.exists('GEOmetadb.sqlite')) GEOmetadb::getSQLiteFile()
+
+```
+
+## Connect and Start Looking Through Data
+Connecting to GEOmetadb and started exploration of GEOmetadb based on Week 3 Lectures
+```{r}
+library("GEOmetadb")
+con <- dbConnect(SQLite(),'GEOmetadb.sqlite')
+dbListFields(con, 'gpl')
+
+uniq_tech <- dbGetQuery(con,'select distinct technology from gpl')
+mod_table <- cbind(uniq_tech[1:(nrow(uniq_tech)/2),1],
+       uniq_tech[((nrow(uniq_tech)/2)+1):nrow(uniq_tech),1])
+knitr::kable( mod_table, format = "html")
+
+num_uniq_tech_human <- dbGetQuery(con,'select technology,count(*) 
+                                  as num_plat 
+                                  from gpl 
+                                  where organism = "Homo sapiens" 
+                                  group by technology  
+                                  order by num_plat desc')
+colnames(num_uniq_tech_human)[2] <- "Num_Platforms"
+dim(num_uniq_tech_human)
+
+
+sql <- paste("SELECT DISTINCT gse.title,gse.gse, gpl.title",
+             "FROM",
+             "  gse JOIN gse_gpl ON gse_gpl.gse=gse.gse",
+             "  JOIN gpl ON gse_gpl.gpl=gpl.gpl",
+             "WHERE",
+             "  gpl.title LIKE '%microarray%' ", #<<
+             sep=" ")
+rs <- dbGetQuery(con,sql)
+dim(rs)
+```
+
+## Searching for a dataset
+
+We want to find a dataset that has the following:
+*with good coverage;
+* not much older than ten years (quality!);
+* with sufficient numbers of replicates;
+* collected under interesting conditions;
+* mapped to unique human gene identifiers
+
+I am interested in high throughput data of lung cancers.
+```{r}
+
+sql <- paste("SELECT DISTINCT gse.title,gse.gse, gpl.title,",
+             " gse.submission_date",
+             "FROM",
+             "  gse JOIN gse_gpl ON gse_gpl.gse=gse.gse",
+             "  JOIN gpl ON gse_gpl.gpl=gpl.gpl",
+             "WHERE",
+             "  gse.submission_date > '2013-01-01' AND",
+             "  gse.title LIKE '%lung%' AND ", #<<
+             "  gpl.organism LIKE '%Homo sapiens%' AND",
+              "  gpl.technology LIKE '%high-throughput sequencing%' "
+             ,sep=" ")
+
+rs <- dbGetQuery(con,sql)
+dim(rs)
+```
