@@ -1,0 +1,91 @@
+---
+title: "A1"
+author: "Annie Liu"
+date: "2023-02-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Data set 
+GSE Ascension: GSE138614
+Data set title: Next-generation sequencing study in multiple sclerosis white matter brain lesions
+Associated Publication: Molecular signature of different lesion types in the brain white matter of patients with progressive multiple sclerosis
+
+
+### Step 1: Extracting the Dataset
+
+Download the necessary packages needed for analysis.
+
+``` {r}
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+if (!requireNamespace("GEOmetadb", quietly = TRUE))
+    BiocManager::install("GEOmetadb")
+
+if (!requireNamespace("edgeR", quietly = TRUE)) 
+    BiocManager::install("edgeR")
+
+library("BiocManager")
+library("GEOmetadb")
+library("edgeR")
+```
+
+Fetch the data set.
+
+``` {r}
+datadir <- "/home/rstudio/projects/GSE138614"
+
+sfiles = getGEOSuppFiles('GSE138614')
+fnames = rownames(sfiles)
+# there is only one supplemental file
+expressionData= read.delim(fnames[1],header=TRUE,
+                check.names = FALSE)
+
+```
+
+### Step 2: Clean Dataset
+
+
+``` {r}
+
+
+
+
+```
+
+### Step 3: Apply normalization to dataset
+
+``` {r}
+
+
+
+
+```
+
+### Step 4: Map Identifiers 
+
+``` {r}
+
+
+
+
+```
+
+
+### Step 5: Document 
+What are the control and test conditions of the dataset?
+Why is the dataset of interest to you?
+Were there expression values that were not unique for specific genes? How did you handle these?
+Were there expression values that could not be mapped to current HUGO symbols?
+How many outliers were removed?
+How did you handle replicates?
+What is the final coverage of your dataset?
+
+### References 
+
+
