@@ -21,6 +21,8 @@ if (!requireNamespace("GEOmetadb", quietly = TRUE))
 
 if(!file.exists('GEOmetadb.sqlite')) GEOmetadb::getSQLiteFile()
 
+library("GEOmetadb")
+
 ```
 
 ## Connect and Start Looking Through Data
@@ -65,21 +67,61 @@ We want to find a dataset that has the following:
 * collected under interesting conditions;
 * mapped to unique human gene identifiers
 
-I am interested in high throughput data of lung cancers.
+I am interested in high throughput data of asthma.
 ```{r}
 
 sql <- paste("SELECT DISTINCT gse.title,gse.gse, gpl.title,",
-             " gse.submission_date",
+             " gse.submission_date,",
+             " gse.supplementary_file",
              "FROM",
              "  gse JOIN gse_gpl ON gse_gpl.gse=gse.gse",
              "  JOIN gpl ON gse_gpl.gpl=gpl.gpl",
              "WHERE",
              "  gse.submission_date > '2013-01-01' AND",
-             "  gse.title LIKE '%lung%' AND ", #<<
+             "  gse.title LIKE '%brain%' AND", 
              "  gpl.organism LIKE '%Homo sapiens%' AND",
-              "  gpl.technology LIKE '%high-throughput sequencing%' "
-             ,sep=" ")
+             "  gpl.technology LIKE '%high-throughput sequencing%' ",
+             "  ORDER BY gse.submission_date DESC",sep=" ")
 
 rs <- dbGetQuery(con,sql)
 dim(rs)
+knitr::kable(rs, format = "html")
+unlist(lapply(rs$supplementary_file,
+              FUN = function(x){x <- unlist(strsplit(x,";")) ;
+              x <- x[grep(x,pattern="txt",ignore.case = TRUE)];
+                tail(unlist(strsplit(x,"/")),n=1)})) 
+
+series_of_interest <- rs$gse[grep(rs$supplementary_file,
+                              pattern = "count|cnt",ignore.case = TRUE)]
+
+shortened_filenames <- unlist(lapply(series_of_interest,
+              FUN = function(x){x <- unlist(strsplit(x,";")) ;
+              x <- x[grep(x,pattern= "count|cnt",ignore.case = TRUE)];
+                tail(unlist(strsplit(x,"/")),n=1)}))
+shortened_filenames[1:10]
+
+
+num_series <- dbGetQuery(con, 
+                         paste("select * from gsm where series_id in ('", 
+                               paste(series_of_interest,collapse="','"), 
+                               "')", collapse = ""))
+gse.count <- as.data.frame(table(num_series$series_id))
+series_of_interest_with_counts <- gse.count[which(gse.count$Freq>6),1]
+gse.count[which(gse.count$Freq>6),]
+
+
 ```
+
+# Retrieving the dataset 
+
+We picked the dataset GSE138614
+``` {r}
+sfiles = getGEOSuppFiles('GSE138614')
+fnames = rownames(sfiles)
+# there is only one supplemental file
+c = read.delim(fnames[1],header=TRUE,
+                check.names = FALSE)
+head(c)
+
+```
+
