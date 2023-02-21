@@ -2,25 +2,29 @@
 title: "A1"
 author: "Annie Liu"
 date: "2023-02-11"
-output: html_document
+output: 
+  html_document:
+      toc: true
+      toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Data set 
-GSE Ascension: GSE138614
-Data set title: Next-generation sequencing study in multiple sclerosis white matter brain lesions
-Associated Publication: Molecular signature of different lesion types in the brain white matter of patients with progressive multiple sclerosis
+### Data set Introduction 
+GSE Ascension: GSE75011 
+
+Data set title: Transcriptional profiling of TH2 cells identifies pathogenic features associated with asthma
+
+Associated Publication: Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma
 
 
 ### Step 1: Extracting the Dataset
 
 Download the necessary packages needed for analysis.
 
-``` {r}
-
+``` {r, message=FALSE, warning=FALSE}
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
@@ -30,62 +34,416 @@ if (!requireNamespace("GEOmetadb", quietly = TRUE))
 if (!requireNamespace("edgeR", quietly = TRUE)) 
     BiocManager::install("edgeR")
 
+if (!requireNamespace("DESeq2", quietly = TRUE)) 
+    BiocManager::install("DESeq2")
+
+if (!requireNamespace("biomaRt", quietly = TRUE)) 
+    BiocManager::install("biomaRt")
+
+if (!requireNamespace("dplyr", quietly = TRUE))
+    install.packages("dplyr")
+    
+
 library("BiocManager")
 library("GEOmetadb")
 library("edgeR")
+library("biomaRt")
+library("DESeq2")
+library("dplyr")     
+
 ```
 
-Fetch the data set.
+Fetch the data set and obtain information about the dataset.
 
-``` {r}
-datadir <- "/home/rstudio/projects/GSE138614"
+``` {r, message=FALSE, warning=FALSE}
+datadir <- "/home/rstudio/projects/GSE75011"
 
-sfiles = getGEOSuppFiles('GSE138614')
-fnames = rownames(sfiles)
+if(!file.exists(datadir)) {
+  sfiles = getGEOSuppFiles('GSE75011')
+  fnames = rownames(sfiles)
+  expressionData= read.delim(fnames[1],header=TRUE,
+                check.names = TRUE)
+} else {
+  datadir <- "/home/rstudio/projects/GSE75011/GSE75011_Raw_counts.tsv.gz"
+  expressionData = read.delim(datadir)
+}
+
 # there is only one supplemental file
-expressionData= read.delim(fnames[1],header=TRUE,
-                check.names = FALSE)
+head(expressionData)
 
+# checking the how many observations there are
+dim(expressionData)
+
+# Information about the dataset and its platform 
+gse <- getGEO("GSE75011",GSEMatrix=FALSE)
+knitr::kable(data.frame(head(Meta(gse))), format = "html")
+
+current_gpl <- names(GPLList(gse))[1]
+current_gpl_info <- Meta(getGEO(current_gpl))
+current_gpl_info$title
+current_gpl_info$last_update_date
+current_gpl_info$organism 
 ```
 
-### Step 2: Clean Dataset
+### Step 2: Clean and Filter Dataset
+
+The data needs to be cleaned for any duplicates and filtered for any counts that don't make the edgeR protocol requirement. For edgeR, the protocol states that weakly expressed and noninformative features should be filtered out. 
+
+``` {r, message=FALSE, warning=FALSE}
+#  19886    81, 19886 genes
+head(expressionData) 
+dim(expressionData)
+colnames(expressionData)
+
+# number of control to AR(allergy) to AS(asthma) to HC (healthy controls)
+AS <- length(grep(pattern="AS$", colnames(expressionData), value=TRUE))
+AR <- length(grep(pattern="AR$", colnames(expressionData), value=TRUE))
+HC <- length(grep(pattern="HC$", colnames(expressionData), value=TRUE))
 
 
-``` {r}
+# Checking for duplicates 
+summarized_gene_counts <- sort(table(expressionData$X),
+                               decreasing = TRUE)
 
+knitr::kable(table(expressionData$X)[1:3], format="html")
+# there seem to not be any duplicates
 
+cpms = cpm(expressionData[,2:81])
+rownames(cpms) <- expressionData[,1]
 
+# n needs to be the smallest group of replicates, in this case it's the HC (n = 15)
+keep = rowSums(cpms > 1) >= 15
+expression_data_filtered = expressionData[keep,]
 
+# 12984    81, 12984 genes after filtering
+dim(expression_data_filtered)
+
+# conditions 
+cond <- data.frame(lapply(colnames(expression_data_filtered)[2:81], 
+        FUN=function(x){unlist(strsplit(x, 
+                        split = "_"))[c(1,2)]}))
+colnames(cond) <- colnames(expression_data_filtered)[2:81]
+rownames(cond) <- c("patient_id", "condition")
+cond <- data.frame(t(cond))
+head(cond)
 ```
+
 
 ### Step 3: Apply normalization to dataset
 
-``` {r}
+Create a boxplot to show the mean of the dataset.
+``` {r, message=FALSE, warning=FALSE}
 
+## box plot of the data to see what it looks like 
+plotData <- log2(cpm(expression_data_filtered[,2:81]))
+boxplot(plotData, xlab = "Samples", ylab = "log2 CPM", 
+        las = 2, cex = 1, cex.lab = 1,
+        cex.axis = 1, main = "AS to AR to HC")
+#draw the median on each box plot
+abline(h = median(apply(plotData, 2, median)), 
+       col = "green", lwd = 1, lty = "solid")
 
+counts_density <- apply(log2(cpm(expression_data_filtered[,2:81])), 
+                        2, density)
+  #calculate the limits across all the samples
+    
+  xlim <- 0; ylim <- 0
+    for (i in 1:length(counts_density)) {
+      xlim <- range(c(xlim, counts_density[[i]]$x)); 
+      ylim <- range(c(ylim, counts_density[[i]]$y))
+    }
+    cols <- rainbow(length(counts_density))
+    ltys <- rep(1, length(counts_density))
+    #plot the first density plot to initialize the plot
+    plot(counts_density[[1]], xlim=xlim, ylim=ylim, type="n", 
+         ylab="Smoothing density of log2-CPM", 
+         main="", cex.lab = 0.85)
+    #plot each line
+    for (i in 1:length(counts_density)) 
+      lines(counts_density[[i]], col=cols[i], lty=ltys[i])
+    #create legend
+    legend("topright", colnames(plotData),  
+           col=cols, lty=ltys, cex=0.75, 
+           border ="blue",  text.col = "green4", 
+           merge = TRUE, bg = "gray90")
 
 
 ```
 
-### Step 4: Map Identifiers 
+There definitely seems to centering around a particular mean in this dataset; however, there is a definitive S shaped bump on the left side of the graph. Thus, normalization is most certainly necessary.
 
-``` {r}
+While the owners of the dataset originally used DESeq2 to analyze their differentially expressed data, I would like to try using the edgeR protocol as these two methods are based on similar hypotheses.
+
+``` {r, message=FALSE, warning=FALSE}
+
+# edgeR normalization 
+filtered_data_matrix <- as.matrix(expression_data_filtered[,2:81])
+rownames(filtered_data_matrix) <- expression_data_filtered$X
+d = DGEList(counts=filtered_data_matrix, group=cond$condition)
+
+d = calcNormFactors(d)
+
+normalized_cpm <- cpm(d)
+
+# normalized box plot
+plotData_n <- log2(normalized_cpm)
+
+normalized_boxplot <- boxplot(plotData_n, xlab = "Samples", ylab = "log2 CPM", 
+        las = 2, cex = 1, cex.lab = 1,
+        cex.axis = 1, main = "AS to AR to HC")
+#draw the median on each box plot
+abline(h = median(apply(plotData_n, 2, median)), 
+       col = "green", lwd = 1, lty = "solid")
+
+counts_density_n <- apply(log2(normalized_cpm), 
+                        2, density)
+  #calculate the limits across all the samples
+    xlim <- 0; ylim <- 0
+    for (i in 1:length(counts_density_n)) {
+      xlim <- range(c(xlim, counts_density_n[[i]]$x)); 
+      ylim <- range(c(ylim, counts_density_n[[i]]$y))
+    }
+    cols <- rainbow(length(counts_density_n))
+    ltys <- rep(1, length(counts_density_n))
+    #plot the first density plot to initialize the plot
+    plot(counts_density_n[[1]], xlim=xlim, ylim=ylim, type="n", 
+         ylab="Smoothing density of log2-CPM", 
+         main="", cex.lab = 0.85)
+    #plot each line
+    for (i in 1:length(counts_density_n)) 
+      lines(counts_density[[i]], col=cols[i], lty=ltys[i])
+    #create legend
+    legend("topright", colnames(plotData_n),  
+           col=cols, lty=ltys, cex=0.75, 
+           border ="blue",  text.col = "green4", 
+           merge = TRUE, bg = "gray90")
+
+```
+
+### Step 4: Exploratory Data Analysis
+
+We can see from the boxplots of the nonnormalized and normalized data that the data has indeed been normalized. Observe how in the density plot, the samples are more aligned with the global median after normalization.
+
+```{r, message=FALSE, warning=FALSE}
+# nonnormalized boxplot
+plotData <- log2(cpm(expression_data_filtered[,2:81]))
+boxplot(plotData, xlab = "Samples", ylab = "log2 CPM", 
+        las = 2, cex = 1, cex.lab = 1,
+        cex.axis = 1, main = "AS to AR to HC")
+#draw the median on each box plot
+abline(h = median(apply(plotData, 2, median)), 
+       col = "green", lwd = 1, lty = "solid")
+
+# normalized box plot
+plotData_n <- log2(normalized_cpm)
+
+boxplot(plotData_n, xlab = "Samples", ylab = "log2 CPM", 
+        las = 2, cex = 1, cex.lab = 1,
+        cex.axis = 1, main = "AS to AR to HC")
+#draw the median on each box plot
+abline(h = median(apply(plotData_n, 2, median)), 
+       col = "green", lwd = 1, lty = "solid")
 
 
+# nonnormalized density plot
+counts_density <- apply(log2(cpm(expression_data_filtered[,2:81])), 
+                        2, density)
+  #calculate the limits across all the samples
+    
+  xlim <- 0; ylim <- 0
+    for (i in 1:length(counts_density)) {
+      xlim <- range(c(xlim, counts_density[[i]]$x)); 
+      ylim <- range(c(ylim, counts_density[[i]]$y))
+    }
+    cols <- rainbow(length(counts_density))
+    ltys <- rep(1, length(counts_density))
+    #plot the first density plot to initialize the plot
+    plot(counts_density[[1]], xlim=xlim, ylim=ylim, type="n", 
+         ylab="Smoothing density of log2-CPM", 
+         main="", cex.lab = 0.85)
+    #plot each line
+    for (i in 1:length(counts_density)) 
+      lines(counts_density[[i]], col=cols[i], lty=ltys[i])
+    #create legend
+    legend("topright", colnames(plotData),  
+           col=cols, lty=ltys, cex=0.75, 
+           border ="blue",  text.col = "green4", 
+           merge = TRUE, bg = "gray90")
 
+# normalized density plot
+counts_density_n <- apply(log2(normalized_cpm), 
+                        2, density)
+  #calculate the limits across all the samples
+    xlim <- 0; ylim <- 0
+    for (i in 1:length(counts_density_n)) {
+      xlim <- range(c(xlim, counts_density_n[[i]]$x)); 
+      ylim <- range(c(ylim, counts_density_n[[i]]$y))
+    }
+    cols <- rainbow(length(counts_density_n))
+    ltys <- rep(1, length(counts_density_n))
+    #plot the first density plot to initialize the plot
+    plot(counts_density_n[[1]], xlim=xlim, ylim=ylim, type="n", 
+         ylab="Smoothing density of log2-CPM", 
+         main="", cex.lab = 0.85)
+    #plot each line
+    for (i in 1:length(counts_density_n)) 
+      lines(counts_density_n[[i]], col=cols[i], lty=ltys[i])
+    #create legend
+    legend("topright", colnames(plotData_n),  
+           col=cols, lty=ltys, cex=0.75, 
+           border ="blue",  text.col = "green4", 
+           merge = TRUE, bg = "gray90")
+    
+    
+# MDS plot, a multidimensional scaling plot 
+plotMDS(d, labels=rownames(cond), col = c("darkgreen", "blue", "red")[factor(cond$condition)])
+
+```
+There seems to be two very clear clusters with much of the AS group clustering together. Curiously, it seems like the HC (healthy control group) is split between the two clusters.
+
+Let's calculate dispersion.
+``` {r, message=FALSE, warning=FALSE}
+model_design <- model.matrix(~cond$condition+0)
+disp <- estimateDisp(d, model_design)
+head(disp)
+
+#plot BCV graph
+plotBCV(disp, col.tagwise = "black",col.common = "red")
+
+#plot mean-variance graph
+plotMeanVar(disp, show.raw.vars = TRUE, show.tagwise.vars = TRUE, NBline = TRUE,
+                   show.ave.raw.vars = TRUE,
+                   show.binned.common.disp.vars = TRUE)
 
 ```
 
 
-### Step 5: Document 
-What are the control and test conditions of the dataset?
-Why is the dataset of interest to you?
-Were there expression values that were not unique for specific genes? How did you handle these?
-Were there expression values that could not be mapped to current HUGO symbols?
-How many outliers were removed?
-How did you handle replicates?
-What is the final coverage of your dataset?
+### Step 5: Map Identifiers 
+In this final step, we want to map the gene names to Ensembl as this dataset only came with the gene name that might be HGNC, but I don't have true confirmation from the authors that it is HGNC. I found this package on CRAN called HGNChelper to see if it is the gene name table is HGNC. There is a function HGNChelper::checkGeneSymbols that identifies symbols that might be outdated and returns a suggested HGNC version of the gene name https://cran.r-project.org/web/packages/HGNChelper/vignettes/index.html
+
+``` {r, message=FALSE, warning=FALSE}
+# For clarity, I'm renaming the X column as gene
+names(expression_data_filtered)[names(expression_data_filtered) == "X"] <- "gene"
+head(expression_data_filtered)
+
+if (!requireNamespace("HGNChelper", quietly = TRUE)) 
+    BiocManager::install("HGNChelper")
+
+library("HGNChelper")
+
+# Take all the gene names and check if there is any NA in the list
+gene_vec <- expression_data_filtered[,1]
+any(is.na(gene_vec)) # FALSE
+
+#This function takes a vector and checks if the gene symbols match up to HGNC standards 
+check_gene_vec_hgnc <- checkGeneSymbols(gene_vec, unmapped.as.na = FALSE, map = NULL, species = "human")
+
+#check the number of genes where the gene name is not HGNC approved
+length(which(check_gene_vec_hgnc$Approved == "FALSE")) # 1658
+length(gene_vec) # 12984 genes in total 
+(1658/12984)*100 # just under 13% of the gene names are not to HGNC standard
+
+# check if any of the gene to HGNC conversions are NA, ie, where there was no mapping 
+any(is.na(check_gene_vec_hgnc$Suggested.Symbol)) # FALSE
+
+gene_vec_hgnc <- check_gene_vec_hgnc$Suggested.Symbol
+
+# check of the length of these vectors are the same 
+length(gene_vec) == length(gene_vec_hgnc) # TRUE
+
+expression_data_filtered <- cbind(gene_vec_hgnc, expression_data_filtered)
+
+names(expression_data_filtered)[names(expression_data_filtered) == "gene_vec_hgnc"] <- "gene_hgnc"
+head(expression_data_filtered)
+
+# we're trying to get HGNC to ensembl 
+# code adapted from https://www.biostars.org/p/430015/
+if (!requireNamespace("org.Hs.eg.db", quietly = TRUE)) {
+    BiocManager::install("org.Hs.eg.db")
+}
+
+if (!requireNamespace("AnnotationDbi", quietly = TRUE)) {
+    BiocManager::install("AnnotationDbi")
+}
+
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+expression_data_filtered$enID = mapIds(org.Hs.eg.db,
+                    keys=expression_data_filtered$gene_hgnc, 
+                    column="ENSEMBL",
+                    keytype="SYMBOL",
+                    multiVals="first")
+head(expression_data_filtered)
+
+
+#moving the enID column to the front for formatting
+expression_data_filtered <- expression_data_filtered %>%
+  dplyr::select(enID, everything())
+head(expression_data_filtered)
+
+normal_counts_df <- as.data.frame(normalized_cpm)
+normal_counts_df_annotated <- cbind(expression_data_filtered[, 1:3], normal_counts_df)
+
+# check if any of the gene names are duplicated after the HUGO symbol conversion 
+any(duplicated(normal_counts_df_annotated$gene_hgnc)) # TRUE
+
+# Final annotated counts notebook
+normal_counts_df_annotated <- normal_counts_df_annotated[!duplicated(normal_counts_df_annotated$gene_hgnc),] # remove those duplicates
+
+# check if there are missing mappings 
+any(is.na(normal_counts_df_annotated$enID)) # TRUE
+length(which(is.na(normal_counts_df_annotated$enID))) # 810
+length(normal_counts_df_annotated$gene_hgnc) # 12973
+
+hgnc_en_diff <- length(normal_counts_df_annotated$gene_hgnc) - length(which(is.na(expression_data_filtered$enID))) 
+hgnc_en_diff #12161
+hgnc_en_diff_proportion <- (length(which(is.na(expression_data_filtered$enID))) /length(expression_data_filtered$gene_hgnc)) *100
+hgnc_en_diff_proportion # 6.253851 of the genes without an ensembl id
+
+```
+
+The final table is normal_counts_df_annotated, and it has HUGO and Ensembl IDs as columns. Following the final example on the lecture 5 slides, I opted to keep the HGNC symbols as a column rather than naming the rows of the table with the HGNC symbols. 
+
+``` {r, message=FALSE, warning=FALSE}
+head(normal_counts_df_annotated)
+```
+
+
+### Step 6: Document 
+**What are the control and test conditions of the dataset?**
+The control is the healthy cohort that does not have allergic rhinitis nor asthma. 
+The test conditions are the cohort with allergic rhinitis and the cohort with asthma.
+
+**Why is the dataset of interest to you?**
+This dataset is of interest to me as I am someone with a dust and cat allergy, and I am also asthmatic. I've always wondered why I have developed this sort of pathology that has prevented me from enjoying cats and running without an inhaler. Thus, this dataset explores this question in particular. 
+
+**Were there expression values that were not unique for specific genes? How did you handle these?**
+After HUGO symbol conversion, I removed any duplicate genes from the dataset. 
+
+**Were there expression values that could not be mapped to current HUGO symbols?**
+I had a specific instance where I was provided with gene symbols that all could be converted to HGNC symbols, but I did not have the Ensembl IDs for the genes. About 6% of the genes could not be mapped to Ensembl IDs. I will leave those in for now and use HUGO symbols as needed, but I may investigate other methods for mapping to Ensembl IDs. 
+
+**How many outliers were removed?**
+No signficant outliers were identified, and thus, none were removed.
+
+**How did you handle replicates?**
+This dataset contained 25 AR replicates, 40 AS replicates, and 15 HC replicates. I followed the edgeR protocol and applied normalization based off of the lowest number of replicates, that being 15. Normalization was then applied to remove technical variation.
+
+**What is the final coverage of your dataset?**
+After filtering and normalization, 12984 genes across 25 AR samples, 40 AS samples, and 15 HC samples were left. After removing duplicate genes, 12973 genes were left with 12161 genes that had both HUGO symbols and Ensembl IDs.
 
 ### References 
+
+Conversion of gene name to ensembl ID. (n.d.). Biostars.org. Retrieved February 20, 2023, from https://www.biostars.org/p/430015/
+
+Isserlin, R. (2023). Lecture 4 - Data Exploration and Normalization. Quercus.
+https://q.utoronto.ca/courses/294979/files/24035536?module_item_id=4287827
+
+Isserlin, R. (2023). Lecture 5 - Data Exploration and Identifier Mapping. 
+Quercus. https://q.utoronto.ca/courses/294979/files/24035540?module_item_id=4287835
+
+Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
+
+
 
 
