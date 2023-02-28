@@ -1,0 +1,31 @@
+---
+title: "A2"
+author: "Annie Liu"
+date: "2023-02-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Differential Gene Expression
+
+Calculate p-values for each of the genes in your expression set. How many genes were significantly differentially expressed? What thresholds did you use and why?
+Multiple hypothesis testing - correct your p-values using a multiple hypothesis correction method. Which method did you use? And Why? How many genes passed correction?
+Show the amount of differentially expressed genes using an MA Plot or a Volcano plot. Highlight genes of interest.
+Visualize your top hits using a heatmap. Do you conditions cluster together? Explain why or why not.
+
+
+## Thresholded over-representation analysis
+Which method did you choose and why?
+What annotation data did you use and why? What version of the annotation are you using?
+How many genesets were returned with what thresholds?
+Run the analysis using the up-regulated set of genes, and the down-regulated set of genes separately. How do these results compare to using the whole list (i.e all differentially expressed genes together vs. the up-regulated and down regulated differentially expressed genes separately)?
+
+## Interpretation
+Do the over-representation results support conclusions or mechanism discussed in the original paper?
+Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your results.
+
+## References
+
