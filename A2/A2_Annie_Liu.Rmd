@@ -4,16 +4,88 @@ author: "Annie Liu"
 date: "2023-02-28"
 output: html_document
 ---
+### Dataset Introduction
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+In A1, I analyzed the dataset with the GEO ascension GSE75011, a dataset called Transcriptional profiling of TH2 cells identifies pathogenic features associated with asthma that was associated with the publication "Transcriptional Profilign of Th2 Cells Identifies Pathogenic Features Associated with Asthma" (Seumois et al. 2016). 
+
+Asthma and allergic rhinitis are conditions affecting millions of people around the world, and these conditions are often comorbid with similar immunological hallmarks; however, not every person who has allergic rhinitis develop asthma in their lifetime. This study looks at the transcriptional profiling of Th2 cell enriched CD4 memory cells in patients with asthma, rhinitis, and healthy controls to attempt to gain genetic insights on these conditions. 
+
+In A1, the aforementioned dataset was cleaned, filtered, and normalized using the edgeR protocol. The dataset contained gene names that were converted to HUGO symbols and then mapped to ensembl IDs. After data cleaning, 12973 genes were across all the samples were left with 12161 genes that had HUGO and ensmebl ids.  
+
+
+## Load Libraries
+
+``` {r}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+if (!requireNamespace("GEOmetadb", quietly = TRUE))
+    BiocManager::install("GEOmetadb")
+
+if (!requireNamespace("edgeR", quietly = TRUE)) 
+    BiocManager::install("edgeR")
+
+if (!requireNamespace("DESeq2", quietly = TRUE)) 
+    BiocManager::install("DESeq2")
+
+if (!requireNamespace("biomaRt", quietly = TRUE)) 
+    BiocManager::install("biomaRt")
+
+if (!requireNamespace("dplyr", quietly = TRUE))
+    install.packages("dplyr")
+
+if (!requireNamespace("ComplexHeatmap", quietly = TRUE))
+    BiocManager::install("ComplexHeatmap")
+
+if (!requireNamespace("circlize", quietly = TRUE))
+    install.packages("circlize")
+
+library("BiocManager")
+library("GEOmetadb")
+library("edgeR")
+library("biomaRt")
+library("DESeq2")
+library("dplyr")     
+
+```
+## Data Visualization
+```{r}
+# Add normalized_count_data in
+norm_data <- read.csv(file.path(getwd(), "data"))
+norm_data = subset(norm_data, select= -X)
+head(norm_data)
+
+# Create numerical matrix that we can create a heatmap from
+
+heatmap_matrix <- norm_data[, 4:ncol(norm_data)]
+rownames(heatmap_matrix) <- norm_data$gene_hgnc
+colnames(heatmap_matrix) <- colnames(norm_data[,4:ncol(heatmap_matrix)])
+
+heatmap_matrix <- t(scale(t(heatmap_matrix)))
+
+library(ComplexHeatmap)
+library(circlize)
+if(min(heatmap_matrix) == 0){
+  heatmap_col = colorRamp2(c( 0, max(heatmap_matrix)), c("white", "red"))
+} else {
+  heatmap_col = colorRamp2(c(min(heatmap_matrix), 0, max(heatmap_matrix)), c("blue", "white", "red"))
+}
+
+current_heatmap <- Heatmap(as.matrix(heatmap_matrix),
+                           show_row_dend = TRUE, show_column_dend= TRUE, col=heatmap_col, show_column_names = TRUE, show_row_names=FALSE, show_heatmap_legend=TRUE)
+
+current_heatmap
 ```
 
-## Differential Gene Expression
 
+
+## Differential Gene Expression
 Calculate p-values for each of the genes in your expression set. How many genes were significantly differentially expressed? What thresholds did you use and why?
+
 Multiple hypothesis testing - correct your p-values using a multiple hypothesis correction method. Which method did you use? And Why? How many genes passed correction?
+
 Show the amount of differentially expressed genes using an MA Plot or a Volcano plot. Highlight genes of interest.
+
 Visualize your top hits using a heatmap. Do you conditions cluster together? Explain why or why not.
 
 
