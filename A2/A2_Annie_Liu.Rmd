@@ -40,14 +40,23 @@ if (!requireNamespace("ComplexHeatmap", quietly = TRUE))
 if (!requireNamespace("circlize", quietly = TRUE))
     install.packages("circlize")
 
+if (!requireNamespace("ggplot2", quietly = TRUE))
+    install.packages("ggplot2")
+
 library("BiocManager")
 library("GEOmetadb")
 library("edgeR")
 library("biomaRt")
 library("DESeq2")
-library("dplyr")     
+library("dplyr") 
+library(ComplexHeatmap)
+library(circlize)
+library(knitr)
+library("ggplot2")
 
 ```
+
+
 ## Data Visualization
 ```{r}
 # Add normalized_count_data in
@@ -63,8 +72,6 @@ colnames(heatmap_matrix) <- colnames(norm_data[,4:ncol(heatmap_matrix)])
 
 heatmap_matrix <- t(scale(t(heatmap_matrix)))
 
-library(ComplexHeatmap)
-library(circlize)
 if(min(heatmap_matrix) == 0){
   heatmap_col = colorRamp2(c( 0, max(heatmap_matrix)), c("white", "red"))
 } else {
@@ -75,29 +82,131 @@ current_heatmap <- Heatmap(as.matrix(heatmap_matrix),
                            show_row_dend = TRUE, show_column_dend= TRUE, col=heatmap_col, show_column_names = TRUE, show_row_names=FALSE, show_heatmap_legend=TRUE)
 
 current_heatmap
+
+
+# MDS plot 
+
+cond <- data.frame(lapply(colnames(norm_data)[4:83], 
+        FUN=function(x){unlist(strsplit(x, 
+                        split = "_"))[c(1,2)]}))
+colnames(cond) <- colnames(norm_data)[4:83]
+rownames(cond) <- c("patient_id", "condition")
+cond <- data.frame(t(cond))
+
+expr_data <- as.matrix(norm_data[,4:83])
+rownames(expr_data) <- norm_data$gene_hgnc
+d = DGEList(counts=expr_data, group=cond$condition)
+MDS_by_cond_edgeR <- plotMDS(d, labels=rownames(cond), col = c("darkgreen", "blue", "red")[factor(cond$condition)])
+
+```
+
+Going by what is present in the paper, we know that the sample groups are important in determining its value. Since we have two experimental groups here to one control, I am going to investigate each experimental group in relation to the other samples.
+
+## Fitting model and computing differential expression
+```{r}
+# model design 
+conditions <- cond$condition
+model_d <- model.matrix(~0 + conditions) 
+
+head(model_d)
+
+d <- estimateDisp(d, model_d)
+
+# fit model 
+
+fit <- glmQLFit(d, model_d)
+
+# compute differential expression 
+
+compare_HCtoAR <- makeContrasts(HCtoAR="conditionsHC-conditionsAR", levels = model_d)
+qlf_HCtoAR <- glmQLFTest(fit, contrast = compare_HCtoAR)
+tt_HCtoAR <- topTags(qlf_HCtoAR, adjust.method = "BH", n=nrow(d))
+
+
+# compare AS to all
+contrast_AS <- makeContrasts(hctoall="conditionsAS-(conditionsHC + conditionsAS)/2", levels=model_d)
+qlf_AS_to_all <- glmQLFTest(fit, contrast = contrast_HC)
+
+
+# apply Benjamin-Hochberg 
+tt_AS_to_all <- topTags(qlf_AS_to_all, adjust.method = "BH", n=nrow(d))
+# 1934
+length(which(tt_AS_to_all$table$PValue<0.05))
+# 435
+length(which(tt_AS_to_all$table$FDR<0.05))
+output_AS_to_all <- merge(norm_data[,2:3], tt_AS_to_all, by.y=0, by.x=1, all.y=TRUE)
+output_AS_to_all <- output_AS_to_all[order(output_AS_to_all$PValue),]
+head(output_AS_to_all)
+
+# compare AR to all
+contrast_AR <- makeContrasts(hctoall="conditionsAR-(conditionsHC + conditionsAS)/2", levels=model_d)
+qlf_AR_to_all <- glmQLFTest(fit, contrast = contrast_AR)
+
+# apply Benjamin-Hochberg 
+tt_AR_to_all <- topTags(qlf_AR_to_all, adjust.method = "BH", n=nrow(d))
+# 1179
+length(which(tt_AR_to_all$table$PValue<0.05))
+# 17
+length(which(tt_AR_to_all$table$FDR<0.05))
+output_AR_to_all <- merge(norm_data[,2:3], tt_AR_to_all, by.y=0, by.x=1, all.y=TRUE)
+output_AR_to_all <- output_AR_to_all[order(output_AR_to_all$PValue),]
+head(output_AR_to_all)
 ```
 
 
+## Volcano Plot of Differentially Expressed Genes
+```{r}
+# Code adapted from the following https://www.nathalievialaneix.eu/doc/html/solution-edgeR-rnaseq.html
+# Plot code adapted from the following https://biocorecrg.github.io/CRG_RIntroduction/volcano-plots.html
 
-## Differential Gene Expression
-Calculate p-values for each of the genes in your expression set. How many genes were significantly differentially expressed? What thresholds did you use and why?
+# TODO: Colour and label the volcano plots 
 
-Multiple hypothesis testing - correct your p-values using a multiple hypothesis correction method. Which method did you use? And Why? How many genes passed correction?
+# Volcano Plot of AS to all 
+volcano_Data_AS_to_All <- cbind(tt_AS_to_all$table$logFC, -log10(tt_AS_to_all$table$FDR))
+colnames(volcano_Data_AS_to_All) <- c("logFC", "negLogPval")
+plot(volcano_Data_AS_to_All, pch=20,
+     main="Volcano Plot of AS to all groups Differential Expression")
 
-Show the amount of differentially expressed genes using an MA Plot or a Volcano plot. Highlight genes of interest.
 
-Visualize your top hits using a heatmap. Do you conditions cluster together? Explain why or why not.
+# Volcano Plot of AR to all
+volcano_Data_AR_to_All <- cbind(tt_AR_to_all$table$logFC, -log10(tt_AR_to_all$table$FDR))
+colnames(volcano_Data_AR_to_All) <- c("logFC", "negLogPval")
+plot(volcano_Data_AR_to_All, pch=20,
+     main="Volcano Plot of AR to all groups Differential Expression")
+```
+## Heatmap of Top Hits
+```{r}
+
+```
+
+## Differential Gene Expression Summary
+**Calculate p-values for each of the genes in your expression set. How many genes were significantly differentially expressed? What thresholds did you use and why?**
+
+In our comparison of AS to all, there were 1934 genes with p-values less than 0.05. In our comparison of AR to all, there were 1179 genes with p-values less than 0.05.
+
+**Multiple hypothesis testing - correct your p-values using a multiple hypothesis correction method. Which method did you use? And Why? How many genes passed correction?**
+
+I used Benjamin-Hochberg as a multiple hypothesis correction method because this is what the original publishers of the dataset used. In our comparison of AS to all, 435 genes that passed correction. In our comparison of AR to all, 17 genes passed correction. 
+
+**Show the amount of differentially expressed genes using an MA Plot or a Volcano plot. Highlight genes of interest.**
+See the section "Volcano Plot of Differentially Expressed Genes"
+
+**Visualize your top hits using a heatmap. Do you conditions cluster together? Explain why or why not.**
+
+
 
 
 ## Thresholded over-representation analysis
-Which method did you choose and why?
-What annotation data did you use and why? What version of the annotation are you using?
-How many genesets were returned with what thresholds?
-Run the analysis using the up-regulated set of genes, and the down-regulated set of genes separately. How do these results compare to using the whole list (i.e all differentially expressed genes together vs. the up-regulated and down regulated differentially expressed genes separately)?
+**Which method did you choose and why?**
+**What annotation data did you use and why? What version of the annotation are you using?**
+**How many genesets were returned with what thresholds?**
+**Run the analysis using the up-regulated set of genes, and the down-regulated set of genes separately. How do these results compare to using the whole list (i.e all differentially expressed genes together vs. the up-regulated and down regulated differentially expressed genes separately)?**
 
 ## Interpretation
 Do the over-representation results support conclusions or mechanism discussed in the original paper?
 Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your results.
 
 ## References
+
+Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
 
