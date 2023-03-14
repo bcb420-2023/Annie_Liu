@@ -37,9 +37,6 @@ if (!requireNamespace("ComplexHeatmap", quietly = TRUE))
 if (!requireNamespace("circlize", quietly = TRUE))
     install.packages("circlize")
 
-if (!requireNamespace("ggplot2", quietly = TRUE))
-    install.packages("ggplot2")
-
 if (!requireNamespace("gprofiler2", quietly = TRUE))
     install.packages("gprofiler2")
 
@@ -47,7 +44,6 @@ library("BiocManager")
 library("edgeR")
 library(ComplexHeatmap)
 library(circlize)
-library("ggplot2")
 library("gprofiler2")
 
 ```
@@ -99,7 +95,7 @@ MDS_by_cond_edgeR <- plotMDS(d, labels=rownames(cond), col = c("darkgreen", "blu
 Going by what is present in the paper, we know that the sample groups are important in determining its value. Since we have two experimental groups here to one control, I am going to investigate each experimental group in relation to the other samples.
 
 ## Fitting model and computing differential expression
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # model design 
 conditions <- cond$condition
 model_d <- model.matrix(~0 + conditions) 
@@ -111,12 +107,6 @@ d <- estimateDisp(d, model_d)
 # fit model 
 
 fit <- glmQLFit(d, model_d)
-
-# compute differential expression 
-
-compare_HCtoAR <- makeContrasts(HCtoAR="conditionsHC-conditionsAR", levels = model_d)
-qlf_HCtoAR <- glmQLFTest(fit, contrast = compare_HCtoAR)
-tt_HCtoAR <- topTags(qlf_HCtoAR, adjust.method = "BH", n=nrow(d))
 
 
 # compare AS to all
@@ -151,7 +141,7 @@ head(output_AR_to_all)
 
 
 ## Volcano Plot of Differentially Expressed Genes
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Code adapted from the following https://www.nathalievialaneix.eu/doc/html/solution-edgeR-rnaseq.html
 
 # Volcano Plot of AS to all 
@@ -167,16 +157,14 @@ plot(volcano_Data_AS_to_All$logFC,
      col=volcano_Data_AS_to_All$color,
      pch=20,
      main="Volcano Plot of AS to all groups Differential Expression")
-legend(x = "topright",          # Position
+legend(x = "topright",    
        legend = c("Upregulated", "Downregulated", "Neither"),
        fill= c("green", "orange", "black")
        )
-
-
 ```
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Volcano Plot of AR to all
 volcano_Data_AR_to_All <- as.data.frame(cbind(tt_AR_to_all$table$logFC, -log10(tt_AR_to_all$table$FDR), tt_AR_to_all$table$PValue))
 colnames(volcano_Data_AR_to_All) <- c("logFC", "negLogPval", "PValue")
@@ -189,7 +177,7 @@ plot(volcano_Data_AR_to_All$logFC,
      ylab= "logFC",
      col=volcano_Data_AR_to_All$color,
      pch=20,
-     main="Volcano Plot of AS to all groups Differential Expression")
+     main="Volcano Plot of AR to all groups Differential Expression")
 legend(x = "topright",          # Position
        legend = c("Upregulated", "Downregulated", "Neither"),
        fill= c("green", "orange", "black")
@@ -197,7 +185,7 @@ legend(x = "topright",          # Position
 ```
 
 ## Heatmap of Top Hits
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # normalized counts
 
 normalized_c <- log2(cpm(d) + 1)
@@ -232,7 +220,7 @@ AS_heatmap
 ```
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 AR_top_hits <- rownames(tt_AR_to_all)[which(tt_AR_to_all$table$FDR < 0.05)]
 AR_heatmap_matrix_tophits <- t(scale(t(heatmap_matrix_diff[which(rownames(heatmap_matrix_diff)  %in% AR_top_hits),])))
 
@@ -265,13 +253,16 @@ In our comparison of AS to all, there were 1934 genes with p-values less than 0.
 I used Benjamin-Hochberg as a multiple hypothesis correction method because this is what the original publishers of the dataset used. In our comparison of AS to all, 435 genes that passed correction. In our comparison of AR to all, 17 genes passed correction. 
 
 **Show the amount of differentially expressed genes using an MA Plot or a Volcano plot. Highlight genes of interest.**
+
 See the section "Volcano Plot of Differentially Expressed Genes"
 
 **Visualize your top hits using a heatmap. Do you conditions cluster together? Explain why or why not.**
 
+See the section "Heatmap of Top Hits" for the graphs. What is striking to me is that in both the AR to All comparison and AS to All comparison, the HC (control) group clearly clusters together which implies that the differential expression in the AR and AS group is more similar to each other than to the HC group. This supports the notion that AS and AR have similar pathologies as stated in the original paper. 
+
 
 # Create threshold list of genes 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # AS to all differentially expressed genes
 # number of genes upregulated 
 length(which(output_AS_to_all$PValue < 0.05 & output_AS_to_all$logFC >0))
@@ -302,7 +293,7 @@ downregulated_AR <- output_AR_to_all$gene_hgnc[which(output_AR_to_all$PValue < 0
 gprofiler2 has a intuitive and easy to use R package. Given that we've already had experience using it from our homework assignment and that we currently have a list of genes, it's the most accessible tool for us to use for this assignment.
 
 ## Using gprofiler2 to conduct overexpression analysis 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # code adapted from the gprofiler paper (Kolberg et al. 2020)
 
 # using whole differentially expressed gene list 
@@ -376,7 +367,7 @@ I chose gprofiler because I found its interface intuitive and easy to use in our
 I used GO:BP for gene ontology as this data source is updated very regularly. I used Wikipathways as I was interested in biological pathway analysis, and I like that Wikipathways is an open sourced project with a lot of available data that is not vetted by a certain group (Bohler et al. 2016). 
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # get annotation data versions
 
 gprof_version <- get_version_info(organism="hsapiens")
@@ -396,7 +387,7 @@ WP_ver # "20221210"
 
 We used a P value of <0.05 as is convention. The genesets returned are as follows: 
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # get number of gene sets 
 nrow(gprof_AS_all$result) # 2970
 nrow(gprof_AR_all$result) # 1489
@@ -408,6 +399,12 @@ nrow(gprof_AR_up$result) # 465
 nrow(gprof_AR_down$result) # 1050
 
 ```
+2970 genes were returned in our full list AS to all comparison.
+1489 genes were returned in our full list AR to all comparison.
+595 genes were returned in our upregulated list AS to all comparison.
+2644 genes were returned in our downregulated list AS to all comparison.
+465 genes were returned in our upregulated AR to all comparison.
+1050 genes were returned in our downregulated AR to all comparison.
 
 
 **Run the analysis using the up-regulated set of genes, and the down-regulated set of genes separately. How do these results compare to using the whole list (i.e all differentially expressed genes together vs. the up-regulated and down regulated differentially expressed genes separately)?**
@@ -415,7 +412,7 @@ nrow(gprof_AR_down$result) # 1050
 We will look at the GEO:BP results as every list had hits in GEO:BP but not all had hits in WP.
 
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # AS to all
 gprof_results_AS_all_diff <- gprof_AS_all$result$term_name[1:5]
 gprof_results_AS_up_diff <- gprof_AS_up$result$term_name[1:5]
@@ -433,7 +430,7 @@ ora_AS_comparison
 
 Since in the AS to other groups comparison, there were no significant results in the upregulated list, but quite a number of significant results in the downregulated list, thus the whole list results reflect this distinction.
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # AR to all
 
 gprof_results_AR_all_diff <- gprof_AR_all$result$term_name[1:5]
@@ -453,24 +450,42 @@ In contrast to the AS to all group, the AR to all group did not have signficant 
 
 
 ## Interpretation
-Do the over-representation results support conclusions or mechanism discussed in the original paper?
-Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your results.
+**Do the over-representation results support conclusions or mechanism discussed in the original paper?**
+
+The over-representation results differ from the conclusions and mechanisms discussed in the original paper. 
+The original paper highlighted Il17RB, MAN1A1, CASP2 among other genes of interest whole the top genes in my results include HMGB2, ODC1, H1-10 and so forth. 
+
+It is relevant to note that the original paper used weighted gene coexpression network analysis which is a method of finding correlated genes which would have likely contributed differing gene lists. They also used the DESeq2 package for their analysis while I used edgeR and these packages are based on similar but different hypotheses.
+
+
+**Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your results.**
+
+The top gene that this analysis found was HMGB2 which, according to its Uniprot profile (https://www.uniprot.org/uniprotkb/P26583/entry), is a gene
+involved in immune responses; however, there does not appear to be a publication currently linking it to asthma or allergic rhinitis.
+
 
 ## References
 
 Bohler, A., Wu, G., Kutmon, M., Pradhana, L. A., Coort, S. L., Hanspers, K., Haw, R., Pico, A. R., & Evelo, C. T. (2016). Reactome from a WikiPathways Perspective. PLoS computational biology, 12(5), e1004941. https://doi.org/10.1371/journal.pcbi.1004941
 
+Isserlin, R. (2023). Lecture 6 - Differential Expression. Quercus.
+https://q.utoronto.ca/courses/294979/files/24035541?module_item_id=4287845
+
+Isserlin, R. (2023). Lecture 7 -Annotation Dataset and Intro to Pathway analysis. Quercus. https://q.utoronto.ca/courses/294979/files/24035553?module_item_id=4287856
+
 Kolberg, L., Raudvere, U., Kuzmin, I., Vilo, J., & Peterson, H. (2020). gprofiler2 -- an R package for gene list functional enrichment analysis and namespace conversion toolset g:Profiler. F1000Research, 9, ELIXIR-709. https://doi.org/10.12688/f1000research.24956.2
 
+Langfelder, P., & Horvath, S. (2008). WGCNA: an R package for weighted correlation network analysis. BMC bioinformatics, 9, 559. https://doi.org/10.1186/1471-2105-9-559
+
 Gu, Z., Gu, L., Eils, R., Schlesner, M., & Brors, B. (2014). circlize Implements and enhances circular visualization in R. Bioinformatics (Oxford, England), 30(19), 2811–2812. https://doi.org/10.1093/bioinformatics/btu393
+
+Moisan, A., Gonzales, I., & Villa-Vialaneix, N. (2014, December 10). Practical statistical analysis of RNA-Seq data - edgeR. Retrieved March 14, 2023, from Nathalievialaneix.eu website: https://www.nathalievialaneix.eu/doc/html/solution-edgeR-rnaseq.html
 
 Raudvere, U., Kolberg, L., Kuzmin, I., Arak, T., Adler, P., Peterson, H. and Vilo, J., 2019. g: Profiler: a web server for functional enrichment analysis and conversions of gene lists (2019 update). Nucleic Acids Research, 47(W1), pp.W191-W198.; doi:10.1093/nar/gkz369
 
 Robinson, M. D., McCarthy, D. J., & Smyth, G. K. (2010). edgeR: a Bioconductor package for differential expression analysis of digital gene expression data. Bioinformatics (Oxford, England), 26(1), 139–140. https://doi.org/10.1093/bioinformatics/btp616
 
 Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
-
-Wickham, H. (2016). ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York. Retrieved from https://ggplot2.tidyverse.org
 
 Zuguang Gu, Roland Eils, Matthias Schlesner, Complex heatmaps reveal patterns and correlations in multidimensional genomic data, Bioinformatics, Volume 32, Issue 18, September 2016, Pages 2847–2849, https://doi.org/10.1093/bioinformatics/btw313
 
