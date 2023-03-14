@@ -261,7 +261,7 @@ See the section "Volcano Plot of Differentially Expressed Genes"
 See the section "Heatmap of Top Hits" for the graphs. What is striking to me is that in both the AR to All comparison and AS to All comparison, the HC (control) group clearly clusters together which implies that the differential expression in the AR and AS group is more similar to each other than to the HC group. This supports the notion that AS and AR have similar pathologies as stated in the original paper. 
 
 
-# Create threshold list of genes 
+## Create threshold list of genes 
 ```{r, message=FALSE, warning=FALSE}
 # AS to all differentially expressed genes
 # number of genes upregulated 

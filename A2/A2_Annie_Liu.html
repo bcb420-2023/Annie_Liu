@@ -372,15 +372,13 @@ of Top Hits</a></li>
 <li><a href="#differential-gene-expression-summary" id="toc-differential-gene-expression-summary">Differential Gene
 Expression Summary</a></li>
 <li><a href="#create-threshold-list-of-genes" id="toc-create-threshold-list-of-genes">Create threshold list of
-genes</a>
-<ul>
+genes</a></li>
 <li><a href="#using-gprofiler2-to-conduct-overexpression-analysis" id="toc-using-gprofiler2-to-conduct-overexpression-analysis">Using
 gprofiler2 to conduct overexpression analysis</a></li>
 <li><a href="#thresholded-over-representation-analysis" id="toc-thresholded-over-representation-analysis">Thresholded
 over-representation analysis</a></li>
 <li><a href="#interpretation" id="toc-interpretation">Interpretation</a></li>
 <li><a href="#references" id="toc-references">References</a></li>
-</ul></li>
 </ul>
 </div>
 
@@ -746,8 +744,8 @@ similar to each other than to the HC group. This supports the notion
 that AS and AR have similar pathologies as stated in the original
 paper.</p>
 </div>
-<div id="create-threshold-list-of-genes" class="section level1">
-<h1>Create threshold list of genes</h1>
+<div id="create-threshold-list-of-genes" class="section level2">
+<h2>Create threshold list of genes</h2>
 <pre class="r"><code># AS to all differentially expressed genes
 # number of genes upregulated 
 length(which(output_AS_to_all$PValue &lt; 0.05 &amp; output_AS_to_all$logFC &gt;0))</code></pre>
@@ -776,6 +774,7 @@ downregulated_AR &lt;- output_AR_to_all$gene_hgnc[which(output_AR_to_all$PValue 
 we’ve already had experience using it from our homework assignment and
 that we currently have a list of genes, it’s the most accessible tool
 for us to use for this assignment.</p>
+</div>
 <div id="using-gprofiler2-to-conduct-overexpression-analysis" class="section level2">
 <h2>Using gprofiler2 to conduct overexpression analysis</h2>
 <pre class="r"><code># code adapted from the gprofiler paper (Kolberg et al. 2020)
@@ -1046,7 +1045,6 @@ Pathogenic Features Associated with Asthma. Journal of immunology
 <p>Zuguang Gu, Roland Eils, Matthias Schlesner, Complex heatmaps reveal
 patterns and correlations in multidimensional genomic data,
 Bioinformatics, Volume 32, Issue 18, September 2016, Pages 2847–2849, <a href="https://doi.org/10.1093/bioinformatics/btw313" class="uri">https://doi.org/10.1093/bioinformatics/btw313</a></p>
-</div>
 </div>
 
 
