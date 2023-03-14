@@ -2,7 +2,10 @@
 title: "A2"
 author: "Annie Liu"
 date: "2023-02-28"
-output: html_document
+output: 
+  html_document:
+      toc: true
+      toc_depth: 3
 ---
 
 ```{r setup, include=FALSE}
@@ -89,7 +92,7 @@ cond <- data.frame(t(cond))
 expr_data <- as.matrix(norm_data[,4:83])
 rownames(expr_data) <- norm_data$gene_hgnc
 d = DGEList(counts=expr_data, group=cond$condition)
-MDS_by_cond_edgeR <- plotMDS(d, labels=rownames(cond), col = c("darkgreen", "blue", "red")[factor(cond$condition)])
+MDS_by_cond_edgeR <- plotMDS(d, labels=rownames(cond), col = c("darkgreen", "blue", "red")[factor(cond$condition)], main="MDS plot of all samples")
 
 ```
 
@@ -208,7 +211,7 @@ ha <- HeatmapAnnotation(df=data.frame(
   col =  list(type = ha_colours))
 
 AS_top_hits <- rownames(tt_AS_to_all)[which(tt_AS_to_all$table$FDR < 0.05)]
-AS_heatmap_matrix_tophits <- scale(heatmap_matrix_diff[which(rownames(heatmap_matrix_diff)  %in% AS_top_hits,)])
+AS_heatmap_matrix_tophits <- t(scale(t(heatmap_matrix_diff[which(rownames(heatmap_matrix_diff)  %in% AS_top_hits),])))
 
 if(min(AS_heatmap_matrix_tophits) == 0){
   AS_heatmap_col = colorRamp2(c(0, max(AS_heatmap_matrix_tophits)),
@@ -222,13 +225,16 @@ AS_heatmap <- Heatmap(as.matrix(AS_heatmap_matrix_tophits),
                       cluster_rows = TRUE, show_row_dend = TRUE, 
                       cluster_columns = TRUE, show_column_dend = FALSE,
                       col=AS_heatmap_col, show_column_names = FALSE,
-                      show_row_names = FALSE, show_heatmap_legend=TRUE)
+                      show_row_names = FALSE, show_heatmap_legend=TRUE, top_annotation = ha)
 
 
 AS_heatmap
+```
 
+
+```{r}
 AR_top_hits <- rownames(tt_AR_to_all)[which(tt_AR_to_all$table$FDR < 0.05)]
-AR_heatmap_matrix_tophits <-scale(heatmap_matrix_diff[which(rownames(heatmap_matrix_diff)  %in% AR_top_hits,)])
+AR_heatmap_matrix_tophits <- t(scale(t(heatmap_matrix_diff[which(rownames(heatmap_matrix_diff)  %in% AR_top_hits),])))
 
 if(min(AS_heatmap_matrix_tophits) == 0){
   AR_heatmap_col = colorRamp2(c(0, max(AR_heatmap_matrix_tophits)),
@@ -242,7 +248,7 @@ AR_heatmap <- Heatmap(as.matrix(AR_heatmap_matrix_tophits),
                       cluster_rows = TRUE, show_row_dend = TRUE, 
                       cluster_columns = TRUE, show_column_dend = FALSE,
                       col=AS_heatmap_col, show_column_names = FALSE,
-                      show_row_names = FALSE, show_heatmap_legend=TRUE)
+                      show_row_names = FALSE, show_heatmap_legend=TRUE, top_annotation = ha)
 
 
 AR_heatmap
@@ -442,6 +448,7 @@ colnames(ora_AR_comparison) <- c("Whole List", "Upregulated", "Downregulated")
 
 ora_AR_comparison
 ```
+
 In contrast to the AS to all group, the AR to all group did not have signficant hits in the upregulated and downregulated graphs as shown above. Thus, the term results for the query including the entire gene list is not identical to either the upregulated gene list result or downregulated gene list result.
 
 
