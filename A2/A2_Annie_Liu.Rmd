@@ -487,6 +487,8 @@ Robinson, M. D., McCarthy, D. J., & Smyth, G. K. (2010). edgeR: a Bioconductor p
 
 Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
 
+UniProt Consortium (2023). UniProt: the Universal Protein Knowledgebase in 2023. Nucleic acids research, 51(D1), D523–D531. https://doi.org/10.1093/nar/gkac1052
+
 Zuguang Gu, Roland Eils, Matthias Schlesner, Complex heatmaps reveal patterns and correlations in multidimensional genomic data, Bioinformatics, Volume 32, Issue 18, September 2016, Pages 2847–2849, https://doi.org/10.1093/bioinformatics/btw313
 
 
