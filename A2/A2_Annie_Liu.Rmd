@@ -4,35 +4,29 @@ author: "Annie Liu"
 date: "2023-02-28"
 output: html_document
 ---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
 ### Dataset Introduction
 
 In A1, I analyzed the dataset with the GEO ascension GSE75011, a dataset called Transcriptional profiling of TH2 cells identifies pathogenic features associated with asthma that was associated with the publication "Transcriptional Profilign of Th2 Cells Identifies Pathogenic Features Associated with Asthma" (Seumois et al. 2016). 
 
 Asthma and allergic rhinitis are conditions affecting millions of people around the world, and these conditions are often comorbid with similar immunological hallmarks; however, not every person who has allergic rhinitis develop asthma in their lifetime. This study looks at the transcriptional profiling of Th2 cell enriched CD4 memory cells in patients with asthma, rhinitis, and healthy controls to attempt to gain genetic insights on these conditions. 
 
-In A1, the aforementioned dataset was cleaned, filtered, and normalized using the edgeR protocol. The dataset contained gene names that were converted to HUGO symbols and then mapped to ensembl IDs. After data cleaning, 12973 genes were across all the samples were left with 12161 genes that had HUGO and ensmebl ids.  
+In A1, the aforementioned dataset was cleaned, filtered, and normalized using the edgeR protocol. The dataset contained gene names that were converted to HUGO symbols and then mapped to ensembl IDs. After data cleaning, 12973 genes were across all the samples were left with 12161 genes that had HUGO and ensmebl IDs.  
 
 
 ## Load Libraries
 
-``` {r}
+``` {r, message=FALSE, warning=FALSE}
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
-if (!requireNamespace("GEOmetadb", quietly = TRUE))
-    BiocManager::install("GEOmetadb")
-
 if (!requireNamespace("edgeR", quietly = TRUE)) 
     BiocManager::install("edgeR")
-
-if (!requireNamespace("DESeq2", quietly = TRUE)) 
-    BiocManager::install("DESeq2")
-
-if (!requireNamespace("biomaRt", quietly = TRUE)) 
-    BiocManager::install("biomaRt")
-
-if (!requireNamespace("dplyr", quietly = TRUE))
-    install.packages("dplyr")
 
 if (!requireNamespace("ComplexHeatmap", quietly = TRUE))
     BiocManager::install("ComplexHeatmap")
@@ -43,22 +37,21 @@ if (!requireNamespace("circlize", quietly = TRUE))
 if (!requireNamespace("ggplot2", quietly = TRUE))
     install.packages("ggplot2")
 
+if (!requireNamespace("gprofiler2", quietly = TRUE))
+    install.packages("gprofiler2")
+
 library("BiocManager")
-library("GEOmetadb")
 library("edgeR")
-library("biomaRt")
-library("DESeq2")
-library("dplyr") 
 library(ComplexHeatmap)
 library(circlize)
-library(knitr)
 library("ggplot2")
+library("gprofiler2")
 
 ```
 
 
 ## Data Visualization
-```{r}
+```{r, message=FALSE, warning=FALSE}
 # Add normalized_count_data in
 norm_data <- read.csv(file.path(getwd(), "data"))
 norm_data = subset(norm_data, select= -X)
@@ -125,7 +118,7 @@ tt_HCtoAR <- topTags(qlf_HCtoAR, adjust.method = "BH", n=nrow(d))
 
 # compare AS to all
 contrast_AS <- makeContrasts(hctoall="conditionsAS-(conditionsHC + conditionsAS)/2", levels=model_d)
-qlf_AS_to_all <- glmQLFTest(fit, contrast = contrast_HC)
+qlf_AS_to_all <- glmQLFTest(fit, contrast = contrast_AS)
 
 
 # apply Benjamin-Hochberg 
@@ -157,25 +150,102 @@ head(output_AR_to_all)
 ## Volcano Plot of Differentially Expressed Genes
 ```{r}
 # Code adapted from the following https://www.nathalievialaneix.eu/doc/html/solution-edgeR-rnaseq.html
-# Plot code adapted from the following https://biocorecrg.github.io/CRG_RIntroduction/volcano-plots.html
-
-# TODO: Colour and label the volcano plots 
 
 # Volcano Plot of AS to all 
-volcano_Data_AS_to_All <- cbind(tt_AS_to_all$table$logFC, -log10(tt_AS_to_all$table$FDR))
-colnames(volcano_Data_AS_to_All) <- c("logFC", "negLogPval")
-plot(volcano_Data_AS_to_All, pch=20,
+volcano_Data_AS_to_All <- as.data.frame(cbind(tt_AS_to_all$table$logFC, -log10(tt_AS_to_all$table$FDR), tt_AS_to_all$table$PValue))
+colnames(volcano_Data_AS_to_All) <- c("logFC", "negLogPval", "PValue")
+volcano_Data_AS_to_All$color <- "black"
+volcano_Data_AS_to_All$color[volcano_Data_AS_to_All$PValue < 0.05 & volcano_Data_AS_to_All$logFC > 0] <- "green"
+volcano_Data_AS_to_All$color[volcano_Data_AS_to_All$PValue < 0.05 & volcano_Data_AS_to_All$logFC < 0] <- "orange"
+plot(volcano_Data_AS_to_All$logFC,
+     volcano_Data_AS_to_All$negLogPval,
+     xlab="negLogPval",
+     ylab= "logFC",
+     col=volcano_Data_AS_to_All$color,
+     pch=20,
      main="Volcano Plot of AS to all groups Differential Expression")
+legend(x = "topright",          # Position
+       legend = c("Upregulated", "Downregulated", "Neither"),
+       fill= c("green", "orange", "black")
+       )
 
 
-# Volcano Plot of AR to all
-volcano_Data_AR_to_All <- cbind(tt_AR_to_all$table$logFC, -log10(tt_AR_to_all$table$FDR))
-colnames(volcano_Data_AR_to_All) <- c("logFC", "negLogPval")
-plot(volcano_Data_AR_to_All, pch=20,
-     main="Volcano Plot of AR to all groups Differential Expression")
 ```
+
+
+```{r}
+# Volcano Plot of AR to all
+volcano_Data_AR_to_All <- as.data.frame(cbind(tt_AR_to_all$table$logFC, -log10(tt_AR_to_all$table$FDR), tt_AR_to_all$table$PValue))
+colnames(volcano_Data_AR_to_All) <- c("logFC", "negLogPval", "PValue")
+volcano_Data_AR_to_All$color <- "black"
+volcano_Data_AR_to_All$color[volcano_Data_AR_to_All$PValue < 0.05 & volcano_Data_AR_to_All$logFC > 0] <- "green"
+volcano_Data_AR_to_All$color[volcano_Data_AR_to_All$PValue < 0.05 & volcano_Data_AR_to_All$logFC < 0] <- "orange"
+plot(volcano_Data_AR_to_All$logFC,
+     volcano_Data_AR_to_All$negLogPval,
+     xlab="negLogPval",
+     ylab= "logFC",
+     col=volcano_Data_AR_to_All$color,
+     pch=20,
+     main="Volcano Plot of AS to all groups Differential Expression")
+legend(x = "topright",          # Position
+       legend = c("Upregulated", "Downregulated", "Neither"),
+       fill= c("green", "orange", "black")
+       )
+```
+
 ## Heatmap of Top Hits
 ```{r}
+# normalized counts
+
+normalized_c <- log2(cpm(d) + 1)
+heatmap_matrix_diff <- normalized_c
+
+
+ha_colours <- c("darkgreen","blue","red")
+names(ha_colours) <- unique(cond$condition)
+ha <- HeatmapAnnotation(df=data.frame(
+  type = cond$condition),
+  col =  list(type = ha_colours))
+
+AS_top_hits <- rownames(tt_AS_to_all)[which(tt_AS_to_all$table$FDR < 0.05)]
+AS_heatmap_matrix_tophits <- scale(heatmap_matrix_diff[which(rownames(heatmap_matrix_diff)  %in% AS_top_hits,)])
+
+if(min(AS_heatmap_matrix_tophits) == 0){
+  AS_heatmap_col = colorRamp2(c(0, max(AS_heatmap_matrix_tophits)),
+                              c("white", "red"))
+} else {
+  AS_heatmap_col = colorRamp2(c(min(heatmap_matrix), 0, max(heatmap_matrix)), c("blue", "white", "red"))
+}
+
+
+AS_heatmap <- Heatmap(as.matrix(AS_heatmap_matrix_tophits),
+                      cluster_rows = TRUE, show_row_dend = TRUE, 
+                      cluster_columns = TRUE, show_column_dend = FALSE,
+                      col=AS_heatmap_col, show_column_names = FALSE,
+                      show_row_names = FALSE, show_heatmap_legend=TRUE)
+
+
+AS_heatmap
+
+AR_top_hits <- rownames(tt_AR_to_all)[which(tt_AR_to_all$table$FDR < 0.05)]
+AR_heatmap_matrix_tophits <-scale(heatmap_matrix_diff[which(rownames(heatmap_matrix_diff)  %in% AR_top_hits,)])
+
+if(min(AS_heatmap_matrix_tophits) == 0){
+  AR_heatmap_col = colorRamp2(c(0, max(AR_heatmap_matrix_tophits)),
+                              c("white", "red"))
+} else {
+  AR_heatmap_col = colorRamp2(c(min(heatmap_matrix), 0, max(heatmap_matrix)), c("blue", "white", "red"))
+}
+
+
+AR_heatmap <- Heatmap(as.matrix(AR_heatmap_matrix_tophits),
+                      cluster_rows = TRUE, show_row_dend = TRUE, 
+                      cluster_columns = TRUE, show_column_dend = FALSE,
+                      col=AS_heatmap_col, show_column_names = FALSE,
+                      show_row_names = FALSE, show_heatmap_legend=TRUE)
+
+
+AR_heatmap
 
 ```
 
@@ -194,13 +264,186 @@ See the section "Volcano Plot of Differentially Expressed Genes"
 **Visualize your top hits using a heatmap. Do you conditions cluster together? Explain why or why not.**
 
 
+# Create threshold list of genes 
+```{r}
+# AS to all differentially expressed genes
+# number of genes upregulated 
+length(which(output_AS_to_all$PValue < 0.05 & output_AS_to_all$logFC >0))
 
+# number of genes downregulated
+length(which(output_AS_to_all$PValue < 0.05 & output_AS_to_all$logFC < 0))
+
+output_AS_to_all[, "rank"] <- -log10(output_AS_to_all$PValue) * sign(output_AS_to_all$logFC)
+output_AS_to_all <- output_AS_to_all[order(output_AS_to_all$rank),]
+upregulated_AS <- output_AS_to_all$gene_hgnc[which(output_AS_to_all$PValue < 0.05 & output_AS_to_all$logFC > 0)]
+downregulated_AS <- output_AS_to_all$gene_hgnc[which(output_AS_to_all$PValue < 0.05 & output_AS_to_all$logFC < 0)]
+
+
+# AR to all differentially expressed genes
+# number of genes upregulated 
+length(which(output_AR_to_all$PValue < 0.05 & output_AR_to_all$logFC >0))
+
+# number of genes downregulated
+length(which(output_AR_to_all$PValue < 0.05 & output_AR_to_all$logFC < 0))
+
+output_AR_to_all[, "rank"] <- -log10(output_AR_to_all$PValue) * sign(output_AR_to_all$logFC)
+output_AR_to_all <- output_AR_to_all[order(output_AR_to_all$rank),]
+upregulated_AR <- output_AR_to_all$gene_hgnc[which(output_AR_to_all$PValue < 0.05 & output_AR_to_all$logFC > 0)]
+downregulated_AR <- output_AR_to_all$gene_hgnc[which(output_AR_to_all$PValue < 0.05 & output_AR_to_all$logFC < 0)]
+
+```
+
+gprofiler2 has a intuitive and easy to use R package. Given that we've already had experience using it from our homework assignment and that we currently have a list of genes, it's the most accessible tool for us to use for this assignment.
+
+## Using gprofiler2 to conduct overexpression analysis 
+```{r}
+# code adapted from the gprofiler paper (Kolberg et al. 2020)
+
+# using whole differentially expressed gene list 
+
+gprof_AS_all = gost(output_AS_to_all$gene_hgnc[which(output_AS_to_all$PValue < 0.05)], ordered_query=TRUE, correction_method = "fdr", sources= c("GO:BP", "WP"))
+
+nrow(gprof_AS_all$result) # 2970
+
+gprof_AR_all =  gost(output_AR_to_all$gene_hgnc[which(output_AR_to_all$PValue < 0.05)], ordered_query=TRUE, correction_method = "fdr", sources= c("GO:BP", "WP"))
+
+nrow(gprof_AR_all$result) # 1489
+
+# upregulated, downregulated genes 
+
+gprof_AS_up = gost(upregulated_AS, organism= "hsapiens", ordered_query=TRUE, correction_method = "fdr", sources= c("GO:BP", "WP"))
+
+nrow(gprof_AS_up$result) # 595
+
+
+gprof_AS_down = gost(downregulated_AS, organism= "hsapiens", ordered_query=TRUE, correction_method = "fdr", sources= c("GO:BP", "WP"))
+
+nrow(gprof_AS_down$result) # 2644
+
+gprof_AR_up = gost(upregulated_AR, organism= "hsapiens", ordered_query=TRUE, correction_method = "fdr", sources= c("GO:BP", "WP"))
+
+
+nrow(gprof_AR_up$result) # 465
+
+gprof_AR_down = gost(downregulated_AR, organism= "hsapiens", ordered_query=TRUE, correction_method = "fdr", sources= c("GO:BP", "WP"))
+
+nrow(gprof_AR_down$result) # 1050
+```
+
+gprofiler has a plotting function that we can use the better visualize these results. 
+
+```{r, fig.cap="ORA Results for all Differentially expressed genes in the AS to all group"}
+gostplot(gprof_AS_all, interactive = FALSE)
+```
+
+
+```{r, fig.cap="ORA Results for all Differentially expressed genes in the AR to all group"}
+gostplot(gprof_AR_all, interactive = FALSE)
+```
+
+
+```{r, fig.cap="ORA Results for upregulated Differentially expressed genes in the AS to all group"}
+gostplot(gprof_AS_up, interactive = FALSE)
+```
+
+
+```{r, fig.cap="ORA Results for downregulated Differentially expressed genes in the AS to all group"}
+gostplot(gprof_AS_down, interactive = FALSE)
+```
+
+
+```{r, fig.cap="ORA Results for upregulated Differentially expressed genes in the AR to all group"}
+gostplot(gprof_AR_up, interactive = FALSE)
+```
+
+```{r, fig.cap="ORA Results for downregulated Differentially expressed genes in the AR to all group"}
+gostplot(gprof_AR_down, interactive = FALSE)
+```
 
 ## Thresholded over-representation analysis
 **Which method did you choose and why?**
+
+I chose gprofiler because I found its interface intuitive and easy to use in our homework assignment. In addition, gprofiler also updates its data regularly and has a very straightforward R package. Both of these factors made it a no brainer for this assignment. 
+
 **What annotation data did you use and why? What version of the annotation are you using?**
+
+I used GO:BP for gene ontology as this data source is updated very regularly. I used Wikipathways as I was interested in biological pathway analysis, and I like that Wikipathways is an open sourced project with a lot of available data that is not vetted by a certain group (Bohler et al. 2016). 
+
+
+```{r}
+# get annotation data versions
+
+gprof_version <- get_version_info(organism="hsapiens")
+
+GO_BP_ver <- gprof_version$sources$`GO:BP`$version
+
+GO_BP_ver # "annotations: BioMart\nclasses: releases/2022-12-04"
+
+WP_ver <- gprof_version$sources$WP$version
+
+WP_ver # "20221210"
+
+```
+
+
 **How many genesets were returned with what thresholds?**
+
+We used a P value of <0.05 as is convention. The genesets returned are as follows: 
+
+```{r}
+# get number of gene sets 
+nrow(gprof_AS_all$result) # 2970
+nrow(gprof_AR_all$result) # 1489
+
+nrow(gprof_AS_up$result) # 595
+nrow(gprof_AS_down$result) # 2644
+
+nrow(gprof_AR_up$result) # 465
+nrow(gprof_AR_down$result) # 1050
+
+```
+
+
 **Run the analysis using the up-regulated set of genes, and the down-regulated set of genes separately. How do these results compare to using the whole list (i.e all differentially expressed genes together vs. the up-regulated and down regulated differentially expressed genes separately)?**
+
+We will look at the GEO:BP results as every list had hits in GEO:BP but not all had hits in WP.
+
+
+```{r}
+# AS to all
+gprof_results_AS_all_diff <- gprof_AS_all$result$term_name[1:5]
+gprof_results_AS_up_diff <- gprof_AS_up$result$term_name[1:5]
+gprof_results_AS_down_diff <- gprof_AS_down$result$term_name[1:5]
+
+ora_AS_comparison <- data.frame(gprof_results_AS_all_diff, 
+                                gprof_results_AS_up_diff,
+                                gprof_results_AS_down_diff)
+
+colnames(ora_AS_comparison) <- c("Whole List", "Upregulated", "Downregulated")
+
+ora_AS_comparison
+```
+
+
+Since in the AS to other groups comparison, there were no significant results in the upregulated list, but quite a number of significant results in the downregulated list, thus the whole list results reflect this distinction.
+
+```{r}
+# AR to all
+
+gprof_results_AR_all_diff <- gprof_AR_all$result$term_name[1:5]
+gprof_results_AR_up_diff <- gprof_AR_up$result$term_name[1:5]
+gprof_results_AR_down_diff <- gprof_AR_down$result$term_name[1:5]
+
+ora_AR_comparison <- data.frame(gprof_results_AR_all_diff, 
+                                gprof_results_AR_up_diff,
+                                gprof_results_AR_down_diff)
+
+colnames(ora_AR_comparison) <- c("Whole List", "Upregulated", "Downregulated")
+
+ora_AR_comparison
+```
+In contrast to the AS to all group, the AR to all group did not have signficant hits in the upregulated and downregulated graphs as shown above. Thus, the term results for the query including the entire gene list is not identical to either the upregulated gene list result or downregulated gene list result.
+
 
 ## Interpretation
 Do the over-representation results support conclusions or mechanism discussed in the original paper?
@@ -208,5 +451,20 @@ Can you find evidence, i.e. publications, to support some of the results that yo
 
 ## References
 
+Bohler, A., Wu, G., Kutmon, M., Pradhana, L. A., Coort, S. L., Hanspers, K., Haw, R., Pico, A. R., & Evelo, C. T. (2016). Reactome from a WikiPathways Perspective. PLoS computational biology, 12(5), e1004941. https://doi.org/10.1371/journal.pcbi.1004941
+
+Kolberg, L., Raudvere, U., Kuzmin, I., Vilo, J., & Peterson, H. (2020). gprofiler2 -- an R package for gene list functional enrichment analysis and namespace conversion toolset g:Profiler. F1000Research, 9, ELIXIR-709. https://doi.org/10.12688/f1000research.24956.2
+
+Gu, Z., Gu, L., Eils, R., Schlesner, M., & Brors, B. (2014). circlize Implements and enhances circular visualization in R. Bioinformatics (Oxford, England), 30(19), 2811–2812. https://doi.org/10.1093/bioinformatics/btu393
+
+Raudvere, U., Kolberg, L., Kuzmin, I., Arak, T., Adler, P., Peterson, H. and Vilo, J., 2019. g: Profiler: a web server for functional enrichment analysis and conversions of gene lists (2019 update). Nucleic Acids Research, 47(W1), pp.W191-W198.; doi:10.1093/nar/gkz369
+
+Robinson, M. D., McCarthy, D. J., & Smyth, G. K. (2010). edgeR: a Bioconductor package for differential expression analysis of digital gene expression data. Bioinformatics (Oxford, England), 26(1), 139–140. https://doi.org/10.1093/bioinformatics/btp616
+
 Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
+
+Wickham, H. (2016). ggplot2: Elegant Graphics for Data Analysis. Springer-Verlag New York. Retrieved from https://ggplot2.tidyverse.org
+
+Zuguang Gu, Roland Eils, Matthias Schlesner, Complex heatmaps reveal patterns and correlations in multidimensional genomic data, Bioinformatics, Volume 32, Issue 18, September 2016, Pages 2847–2849, https://doi.org/10.1093/bioinformatics/btw313
+
 
