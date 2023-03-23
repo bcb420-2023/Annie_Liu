@@ -1,0 +1,60 @@
+---
+title: "A3"
+author: "Annie Liu"
+date: "2023-03-23"
+output: 
+  html_document:
+      toc: true
+      toc_depth: 3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+``` {r, message=FALSE, warning=FALSE}
+
+```
+
+## Dataset Introduction
+
+
+## Load Libraries
+``` {r, message=FALSE, warning=FALSE}
+
+```
+
+
+## Non-thresholded Gene Set Enrichment Analysis 
+
+**What method did you use? What genesets did you use? Make sure to specify versions and cite your methods.
+Summarize your enrichment results.**
+
+**How do these results compare to the results from the thresholded analysis in Assignment #2. Compare qualitatively. Is this a straight forward comparison? Why or why not?**
+
+
+
+## Visualize your Gene set Enrichment Analysis in Cytoscape
+
+Create an enrichment map - how many nodes and how many edges in the resulting map? What thresholds were used to create this map? Make sure to record all thresholds. Include a screenshot of your network prior to manual layout.
+Annotate your network - what parameters did you use to annotate the network. If you are using the default parameters make sure to list them as well.
+Make a publication ready figure - include this figure with proper legends in your notebook.
+Collapse your network to a theme network. What are the major themes present in this analysis? Do they fit with the model? Are there any novel pathways or themes?
+
+## Interpretation and detailed view of results
+
+
+he most important aspect of the analysis is relating your results back to the initial data and question.
+
+Do the enrichment results support conclusions or mechanism discussed in the original paper? How do these results differ from the results you got from Assignment #2 thresholded methods
+Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your result?
+Using your networks and results from the previous section add one of the following:
+
+Add a post analysis to your main network using specific transcription factors, microRNAs or drugs. Include the reason why you chose the specific miRs, TFs or drugs (i.e publications indicating that they might be related to your model). What does this post analysis show?
+Choose a specific pathway or theme to investigate in more detail. Why did you choose this pathway or theme? Show the pathway or theme as a gene network or as a pathway diagram. Annotate the network or pathway with your original log fold expression values and p-values to show how it is effected in your model. (Hint: if the theme or pathway is not from database that has detailed mechanistic information like Reactome you can use apps like GeneMANIA or String to build the the interaction network.)
+Sometimes the most interesting information is the gene that has no information. In this type of pathway analysis we can only discover what we have already described previously in the literature or pathway databases. Often pathways found in one disease are applicable to other diseases so this technique can be very helpful. It is important to highlight any genes that are significantly differentially expressed in your model but are not annotated to any pathways. We refer to this set of genes as the dark matter.
+Include a heatmap of any significant genes that are not annotated to any of the pathways returned in the enrichment analysis.
+Include a heatmap of any significant genes that are not annotated to any pathways in entire set of pathways used for the analysis.
+
+
+## References
