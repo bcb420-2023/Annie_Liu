@@ -25,14 +25,46 @@ In A2, I took the dataset that was cleaned in A1 and calculated and ranked diffe
 
 ## Load Libraries
 ``` {r, message=FALSE, warning=FALSE}
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+
+if (!requireNamespace("ggplot2", quietly = TRUE))
+    install.packages("ggplot2")
+
+if (!requireNamespace("RCy3", quietly = TRUE))
+    install.packages("RCy3")
+
+library("BiocManager")
+library("ggplot2")
+library("RCy3")
+library("dplyr")
 
 ```
 
 
 ## Non-thresholded Gene Set Enrichment Analysis 
 
-**What method did you use? What genesets did you use? Make sure to specify versions and cite your methods.
-Summarize your enrichment results.**
+``` {r}
+
+# formatting data for export
+
+AR_to_all <- read.csv("out_AR_to_all.csv")
+AR_output <- dplyr::select(AR_to_all, gene_hgnc, rank)
+AR_output <- as_tibble(AR_output)
+# write.table(AR_output, "./projects/ARvsall_ranked_list.rnk", row.names = FALSE, quote = FALSE, sep="\t")
+
+AS_to_all <- read.csv("out_AS_to_all.csv")
+AS_output <- dplyr::select(AS_to_all, gene_hgnc, rank)
+AS_output <- as_tibble(AS_output)
+# write.table(AS_output, "./projects/ASvsall_ranked_list.rnk", row.names = FALSE, quote = FALSE, sep="\t")
+            
+
+```
+
+
+**What method did you use? What genesets did you use? Make sure to specify versions and cite your methods. Summarize your enrichment results.**
+
+I used GSEA.
 
 **How do these results compare to the results from the thresholded analysis in Assignment #2. Compare qualitatively. Is this a straight forward comparison? Why or why not?**
 
