@@ -51,7 +51,6 @@ library("readr")
 ``` {r}
 
 # formatting data for export
-
 AR_to_all <- read.csv("out_AR_to_all.csv")
 AR_output <- dplyr::select(AR_to_all, gene_hgnc, rank)
 AR_output <- as_tibble(AR_output)
@@ -68,7 +67,6 @@ AS_output <- as_tibble(AS_output)
 After running GSEA, here are some of the results.
 
 ```{r}
-
 gsea_na_pos_AR_to_all <- read_tsv("gsea_report_for_na_pos_AR_to_all.tsv")
 gsea_na_pos_AS_to_all <- read_tsv("gsea_report_for_na_pos_AS_to_all.tsv")
 
@@ -96,7 +94,6 @@ For the AS comparison in the tresholded analysis, the whole list results were ve
 specific the databases are, but nonetheless, it's not exactly a one to one comparison. As similar observation is made with the AR comparison as well.
 
 
-
 ## Visualize your Gene set Enrichment Analysis in Cytoscape
 
 When I ran Enrichment Map, I got a warning about the genes not being ranked from greatest to least, so I ordered them as such in order to avoid errors. 
@@ -108,32 +105,46 @@ AS_output <- as_tibble(AS_output)
 ```
 
 
-Create an enrichment map - how many nodes and how many edges in the resulting map? What thresholds were used to create this map? Make sure to record all thresholds. Include a screenshot of your network prior to manual layout.
+**Create an enrichment map - how many nodes and how many edges in the resulting map? What thresholds were used to create this map? Make sure to record all thresholds. Include a screenshot of your network prior to manual layout.**
 
-There are 76 nodes and 122 edges in this map under a moderately conservation threshold of p-value < 0.005 and FDR < 0.075.
+There are 457 nodes and 2026 edges in this map under a moderately conservation threshold of p-value < 0.005 and FDR < 0.075. 
 
 ![Fig 1: Raw Enrichment Map of AS to All](./AS_to_ALL.png)
 
-Annotate your network - what parameters did you use to annotate the network. If you are using the default parameters make sure to list them as well.
+**Annotate your network - what parameters did you use to annotate the network. If you are using the default parameters make sure to list them as well.**
+
+I used the AutoAnnotate app to cluster nodes together by a pathway. I used the default MCL Cluster algorithm with the label column GS_DESCR and 40 for the max number of annotations in order to make the image a bit more readable.
+
 
 Make a publication ready figure - include this figure with proper legends in your notebook.
 
-Collapse your network to a theme network. What are the major themes present in this analysis? Do they fit with the model? Are there any novel pathways or themes?
+![Fig 2: Publication Ready Figure](./AS_to_ALL_annotated.png)
+
+
+**Collapse your network to a theme network. What are the major themes present in this analysis? Do they fit with the model? Are there any novel pathways or themes?**
+
+![Figure 3: Summary Network](./AS_to_All- Summary Network.png)
+Innate immune response associated themes and other immune system related themes were present in this analysis which is to be expected in the analysis of an asthma related gene set. There was quite a large and dense node labeled "vpu mediated degradation" which has been novel.
+
 
 ## Interpretation and detailed view of results
 
+**Do the enrichment results support conclusions or mechanism discussed in the original paper? How do these results differ from the results you got from Assignment #2 thresholded methods**
 
-he most important aspect of the analysis is relating your results back to the initial data and question.
-
-Do the enrichment results support conclusions or mechanism discussed in the original paper? How do these results differ from the results you got from Assignment #2 thresholded methods
 Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your result?
+
 Using your networks and results from the previous section add one of the following:
 
-Add a post analysis to your main network using specific transcription factors, microRNAs or drugs. Include the reason why you chose the specific miRs, TFs or drugs (i.e publications indicating that they might be related to your model). What does this post analysis show?
 Choose a specific pathway or theme to investigate in more detail. Why did you choose this pathway or theme? Show the pathway or theme as a gene network or as a pathway diagram. Annotate the network or pathway with your original log fold expression values and p-values to show how it is effected in your model. (Hint: if the theme or pathway is not from database that has detailed mechanistic information like Reactome you can use apps like GeneMANIA or String to build the the interaction network.)
-Sometimes the most interesting information is the gene that has no information. In this type of pathway analysis we can only discover what we have already described previously in the literature or pathway databases. Often pathways found in one disease are applicable to other diseases so this technique can be very helpful. It is important to highlight any genes that are significantly differentially expressed in your model but are not annotated to any pathways. We refer to this set of genes as the dark matter.
-Include a heatmap of any significant genes that are not annotated to any of the pathways returned in the enrichment analysis.
-Include a heatmap of any significant genes that are not annotated to any pathways in entire set of pathways used for the analysis.
+
+
 
 
 ## References
+Merico, D., Isserlin, R., Stueker, O., Emili, A., & Bader, G. D. (2010). Enrichment map: a network-based method for gene-set enrichment visualization and interpretation. PloS one, 5(11), e13984. https://doi.org/10.1371/journal.pone.0013984
+
+Robinson, M. D., McCarthy, D. J., & Smyth, G. K. (2010). edgeR: a Bioconductor package for differential expression analysis of digital gene expression data. Bioinformatics (Oxford, England), 26(1), 139–140. https://doi.org/10.1093/bioinformatics/btp616
+
+Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
+
+Subramanian, A., Tamayo, P., Mootha, V. K., Mukherjee, S., Ebert, B. L., Gillette, M. A., Paulovich, A., Pomeroy, S. L., Golub, T. R., Lander, E. S., & Mesirov, J. P. (2005). Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proceedings of the National Academy of Sciences of the United States of America, 102(43), 15545–15550. https://doi.org/10.1073/pnas.0506580102
