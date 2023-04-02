@@ -20,7 +20,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 In A1, I cleaned and normalized the dataset with the GEO ascension GSE75011, a dataset called Transcriptional profiling of TH2 cells identifies pathogenic features associated with asthma that was associated with the publication "Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma" (Seumois et al. 2016). 
 
-In A2, I took the dataset that was cleaned in A1 and calculated and ranked differential gene expression. Thresholded overexpression analysis was performed to differentiate which genes were the most predominantly expressed genes were identified.
+In A2, I took the dataset that was cleaned in A1 and calculated and ranked differential gene expression. Thresholded overexpression analysis was performed to differentiate which genes were the most predominantly expressed genes were identified. I observed the differential gene expression of two groups: Allergic Rhinitis (AR) to all groups and Asthma (AS) to all groups.
 
 
 ## Load Libraries
@@ -28,18 +28,13 @@ In A2, I took the dataset that was cleaned in A1 and calculated and ranked diffe
 if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
-if (!requireNamespace("ggplot2", quietly = TRUE))
-    install.packages("ggplot2")
-
-if (!requireNamespace("RCy3", quietly = TRUE))
-    install.packages("RCy3")
+if (!requireNamespace("dplyr", quietly = TRUE))
+    install.packages("dplyr")
 
 if (!requireNamespace("readr", quietly = TRUE))
     install.packages("readr")
 
 library("BiocManager")
-library("ggplot2")
-library("RCy3")
 library("dplyr")
 library("readr")
 
@@ -105,9 +100,12 @@ AS_output <- as_tibble(AS_output)
 ```
 
 
+Given that the original paper had results that highlighted the differences of ashmatic subjects to the rest of the groups, I have decided to pursue 
+enrichment analysis of the AS to all group for the rest of this report.
+
 **Create an enrichment map - how many nodes and how many edges in the resulting map? What thresholds were used to create this map? Make sure to record all thresholds. Include a screenshot of your network prior to manual layout.**
 
-There are 457 nodes and 2026 edges in this map under a moderately conservation threshold of p-value < 0.005 and FDR < 0.075. 
+There are 457 nodes and 2076 edges in this map under a moderately conservation threshold of p-value < 0.005 and FDR < 0.075. 
 
 ![Fig 1: Raw Enrichment Map of AS to All](./AS_to_ALL.png)
 
@@ -119,19 +117,26 @@ I used the AutoAnnotate app to cluster nodes together by a pathway. I used the d
 Make a publication ready figure - include this figure with proper legends in your notebook.
 
 ![Fig 2: Publication Ready Figure](./AS_to_ALL_annotated.png)
-
+![Fig 3: Legend for the above figure](./AS_to_All_Legend_PValue.png)
 
 **Collapse your network to a theme network. What are the major themes present in this analysis? Do they fit with the model? Are there any novel pathways or themes?**
 
-![Figure 3: Summary Network](./AS_to_All- Summary Network.png)
-Innate immune response associated themes and other immune system related themes were present in this analysis which is to be expected in the analysis of an asthma related gene set. There was quite a large and dense node labeled "vpu mediated degradation" which has been novel.
+![Figure 3: Summary Network. Red for upregulated and blue for downregulated](./AS_to_All- Summary Network.png)
+Innate immune response associated themes and other immune system related themes were present in this analysis which is to be expected in the analysis of an asthma related gene set. There was quite a large and dense node labeled "vpu mediated degradation" which is a novel theme in comparison to our previous analysis.
 
 
 ## Interpretation and detailed view of results
 
 **Do the enrichment results support conclusions or mechanism discussed in the original paper? How do these results differ from the results you got from Assignment #2 thresholded methods**
 
-Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your result?
+The original paper identified transcripts encoding zinc channel proteins to be upregulated in asthmatic patients. In our network, an "ion zinc homeostasis" pathway is shown to be both upregulated and statistically signficant, congruent with the observations of the original paper. In addition, the original paper had also identified that transcripts relating to MAPK signaling to be downregulated in patients with asthma. A node donated as "regulation of MAP kinase activity" is shown to be downregulated in our enrichment results which is also congruent to the original paper. Interestingly, a pathway associated with fatty acid catabolic processes was upregulated in our enrichment map. The paper briefly touched upon the upregulation of an acyl-CoA dehydrogenase encoder in asthmatic patients and that this is involved in the metabolism of fatty acids.
+
+
+**Can you find evidence, i.e. publications, to support some of the results that you see. How does this evidence support your result?**
+
+I was especially curious about the "vpu mediated degradation" pathway in the enrichment map. I found a paper by Roffel et. al (2021) that sought to identify microRNAs (miRNAs) that were associated with asthma. Among the miRNAs they identified, higher expression miR-223-3p was found to be associated inflammatory responses and the organization of cillium in asthmatic patients. Curiously, this miRNA was associated with a negative correlation with Vpu mediated degradation of CD4 Homo sapiens. At the same time in Croteau-Chonka et al. (2018), Vpu mediated degradation of CD4 Homo sapiens was found to be signficantly enriched in obsese asthma patients. 
+
+
 
 Using your networks and results from the previous section add one of the following:
 
@@ -141,9 +146,13 @@ Choose a specific pathway or theme to investigate in more detail. Why did you ch
 
 
 ## References
+Croteau-Chonka, D. C., Chen, Z., Barnes, K. C., Barraza-Villarreal, A., Celedón, J. C., Gauderman, W. J., Gilliland, F. D., Krishnan, J. A., Liu, A. H., London, S. J., Martinez, F. D., Millstein, J., Naureckas, E. T., Nicolae, D. L., White, S. R., Ober, C., Weiss, S. T., & Raby, B. A. (2018). Gene Coexpression Networks in Whole Blood Implicate Multiple Interrelated Molecular Pathways in Obesity in People with Asthma. Obesity (Silver Spring, Md.), 26(12), 1938–1948. https://doi.org/10.1002/oby.22341
+
 Merico, D., Isserlin, R., Stueker, O., Emili, A., & Bader, G. D. (2010). Enrichment map: a network-based method for gene-set enrichment visualization and interpretation. PloS one, 5(11), e13984. https://doi.org/10.1371/journal.pone.0013984
 
 Robinson, M. D., McCarthy, D. J., & Smyth, G. K. (2010). edgeR: a Bioconductor package for differential expression analysis of digital gene expression data. Bioinformatics (Oxford, England), 26(1), 139–140. https://doi.org/10.1093/bioinformatics/btp616
+
+Roffel, M. P., Boudewijn, I. M., van Nijnatten, J. L. L., Faiz, A., Vermeulen, C. J., van Oosterhout, A. J., Affleck, K., Timens, W., Bracke, K. R., Maes, T., Heijink, I. H., Brandsma, C. A., & van den Berge, M. (2022). Identification of asthma-associated microRNAs in bronchial biopsies. The European respiratory journal, 59(3), 2101294. https://doi.org/10.1183/13993003.01294-2021
 
 Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
 
