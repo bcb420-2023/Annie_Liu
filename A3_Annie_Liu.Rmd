@@ -12,15 +12,16 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-``` {r, message=FALSE, warning=FALSE}
-
-```
-
 ## Dataset Introduction
 
 In A1, I cleaned and normalized the dataset with the GEO ascension GSE75011, a dataset called Transcriptional profiling of TH2 cells identifies pathogenic features associated with asthma that was associated with the publication "Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma" (Seumois et al. 2016). 
 
 In A2, I took the dataset that was cleaned in A1 and calculated and ranked differential gene expression. Thresholded overexpression analysis was performed to differentiate which genes were the most predominantly expressed genes were identified. I observed the differential gene expression of two groups: Allergic Rhinitis (AR) to all groups and Asthma (AS) to all groups.
+
+![Fig 1: Volcano Graph of differentially expressed genes in AS to all groups](./figures/AS_to_all_volcano.png)
+
+![Fig 2:  Volcano Graph of differentially expressed genes in AS to all groups](./figures/AR_to_all_volcano_plot.png)
+
 
 
 ## Load Libraries
@@ -41,9 +42,10 @@ library("readr")
 ```
 
 
+
 ## Non-thresholded Gene Set Enrichment Analysis 
 
-``` {r}
+``` {r, message=FALSE, warning=FALSE}
 
 # formatting data for export
 AR_to_all <- read.csv("out_AR_to_all.csv")
@@ -59,14 +61,14 @@ AS_output <- as_tibble(AS_output)
 
 ```
 
-After running GSEA, here are some of the results.
+After running GSEA, here are some of the results. Here, I show case some of the na pos results for the two groups.
 
-```{r}
-gsea_na_pos_AR_to_all <- read_tsv("gsea_report_for_na_pos_AR_to_all.tsv")
-gsea_na_pos_AS_to_all <- read_tsv("gsea_report_for_na_pos_AS_to_all.tsv")
+```{r, message=FALSE, warning=FALSE}
+gsea_na_pos_AS_to_all <- readr::read_tsv("gsea_report_for_na_pos_AS_to_all.tsv")
+gsea_na_pos_AR_to_all <- readr::read_tsv("gsea_report_for_na_pos_AR_to_all.tsv")
 
-knitr::kable(head(gsea_na_pos_AR_to_all))
 knitr::kable(head(gsea_na_pos_AS_to_all))
+knitr::kable(head(gsea_na_pos_AR_to_all))
 
 
 ```
@@ -93,7 +95,7 @@ specific the databases are, but nonetheless, it's not exactly a one to one compa
 
 When I ran Enrichment Map, I got a warning about the genes not being ranked from greatest to least, so I ordered them as such in order to avoid errors. 
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 AS_output <- AS_output[order(AS_output$rank, decreasing=TRUE ),]
 AS_output <- as_tibble(AS_output)
 # write.table(AS_output, "./ASvsall_ranked_list_highest_to_lowest.rnk", row.names = FALSE, quote = FALSE, sep="\t")
@@ -107,7 +109,8 @@ enrichment analysis of the AS to all group for the rest of this report.
 
 There are 457 nodes and 2076 edges in this map under a moderately conservation threshold of p-value < 0.005 and FDR < 0.075. 
 
-![Fig 1: Raw Enrichment Map of AS to All](./AS_to_ALL.png)
+
+![Fig 3: Raw Enrichment Map of AS to All](./figures/AS_to_ALL.png)
 
 **Annotate your network - what parameters did you use to annotate the network. If you are using the default parameters make sure to list them as well.**
 
@@ -116,12 +119,17 @@ I used the AutoAnnotate app to cluster nodes together by a pathway. I used the d
 
 Make a publication ready figure - include this figure with proper legends in your notebook.
 
-![Fig 2: Publication Ready Figure](./AS_to_ALL_annotated.png)
-![Fig 3: Legend for the above figure](./AS_to_All_Legend_PValue.png)
+
+![Fig 4: Publication Ready Figure](./figures/AS_to_ALL_annotated.png)
+
+
+![Fig 5: Legend for the above figure](./figures/AS_to_All_Legend_PValue.png)
 
 **Collapse your network to a theme network. What are the major themes present in this analysis? Do they fit with the model? Are there any novel pathways or themes?**
 
-![Figure 3: Summary Network. Red for upregulated and blue for downregulated](./AS_to_All- Summary Network.png)
+
+![Figure 6: Summary Network. Red for upregulated and blue for downregulated](./figures/AS_to_All- Summary Network.png)
+
 Innate immune response associated themes and other immune system related themes were present in this analysis which is to be expected in the analysis of an asthma related gene set. There was quite a large and dense node labeled "vpu mediated degradation" which is a novel theme in comparison to our previous analysis.
 
 
@@ -137,16 +145,26 @@ The original paper identified transcripts encoding zinc channel proteins to be u
 I was especially curious about the "vpu mediated degradation" pathway in the enrichment map. I found a paper by Roffel et. al (2021) that sought to identify microRNAs (miRNAs) that were associated with asthma. Among the miRNAs they identified, higher expression miR-223-3p was found to be associated inflammatory responses and the organization of cillium in asthmatic patients. Curiously, this miRNA was associated with a negative correlation with Vpu mediated degradation of CD4 Homo sapiens. At the same time in Croteau-Chonka et al. (2018), Vpu mediated degradation of CD4 Homo sapiens was found to be signficantly enriched in obsese asthma patients. 
 
 
+**Choose a specific pathway or theme to investigate in more detail. Why did you choose this pathway or theme? Show the pathway or theme as a gene network or as a pathway diagram. Annotate the network or pathway with your original log fold expression values and p-values to show how it is affected in your model.**
 
-Using your networks and results from the previous section add one of the following:
+I chose the vpu mediated degradation pathway to look into in more detail due to there being some loose associations with this pathway with asthmatic patients in previous studies. Node colour correlates with logFC with blue being more negative and red being more positive. Meanwhile, border colour correlates with Pvalue with a slimmer border denoting a smaller Pvalue.
 
-Choose a specific pathway or theme to investigate in more detail. Why did you choose this pathway or theme? Show the pathway or theme as a gene network or as a pathway diagram. Annotate the network or pathway with your original log fold expression values and p-values to show how it is effected in your model. (Hint: if the theme or pathway is not from database that has detailed mechanistic information like Reactome you can use apps like GeneMANIA or String to build the the interaction network.)
-
+![Figure 7: String Interaction Network of "vpu mediated degradation" ](./figures/STRING with annotationsnetwork.png)
 
 
 
 ## References
+
 Croteau-Chonka, D. C., Chen, Z., Barnes, K. C., Barraza-Villarreal, A., Celedón, J. C., Gauderman, W. J., Gilliland, F. D., Krishnan, J. A., Liu, A. H., London, S. J., Martinez, F. D., Millstein, J., Naureckas, E. T., Nicolae, D. L., White, S. R., Ober, C., Weiss, S. T., & Raby, B. A. (2018). Gene Coexpression Networks in Whole Blood Implicate Multiple Interrelated Molecular Pathways in Obesity in People with Asthma. Obesity (Silver Spring, Md.), 26(12), 1938–1948. https://doi.org/10.1002/oby.22341
+
+Doncheva, N. T., Morris, J. H., Gorodkin, J., & Jensen, L. J. (2019). Cytoscape StringApp: Network Analysis and Visualization of Proteomics Data. Journal of proteome research, 18(2), 623–632. https://doi.org/10.1021/acs.jproteome.8b00702
+
+Isserlin, R. (2023). Lecture 10 - Recap and GSA. Quercus.
+https://q.utoronto.ca/courses/294979/files/24035557?module_item_id=4287874&fd_cookie_set=1
+
+Isserlin, R. (2023). Lecture 11 -Enrichment Map and other Cytoscape Appsother Cytoscape Apps. Quercus. https://q.utoronto.ca/courses/294979/files/24035526?module_item_id=4287888
+
+Isserlin, R. (2023). Lecture 12 -Enrichment Map and other Cytoscape Appsother Cytoscape Apps. Quercus. https://q.utoronto.ca/courses/294979/files/24035559?module_item_id=4287901
 
 Merico, D., Isserlin, R., Stueker, O., Emili, A., & Bader, G. D. (2010). Enrichment map: a network-based method for gene-set enrichment visualization and interpretation. PloS one, 5(11), e13984. https://doi.org/10.1371/journal.pone.0013984
 
@@ -157,3 +175,8 @@ Roffel, M. P., Boudewijn, I. M., van Nijnatten, J. L. L., Faiz, A., Vermeulen, C
 Seumois, G., Zapardiel-Gonzalo, J., White, B., Singh, D., Schulten, V., Dillon, M., Hinz, D., Broide, D. H., Sette, A., Peters, B., & Vijayanand, P. (2016). Transcriptional Profiling of Th2 Cells Identifies Pathogenic Features Associated with Asthma. Journal of immunology (Baltimore, Md. : 1950), 197(2), 655–664. https://doi.org/10.4049/jimmunol.1600397
 
 Subramanian, A., Tamayo, P., Mootha, V. K., Mukherjee, S., Ebert, B. L., Gillette, M. A., Paulovich, A., Pomeroy, S. L., Golub, T. R., Lander, E. S., & Mesirov, J. P. (2005). Gene set enrichment analysis: a knowledge-based approach for interpreting genome-wide expression profiles. Proceedings of the National Academy of Sciences of the United States of America, 102(43), 15545–15550. https://doi.org/10.1073/pnas.0506580102
+
+Wickham, H. and Francois, R. (2015) dplyr: A Grammar of Data Manipulation. R Package Version 0.4.3.
+http://CRAN.R-project.org/package=dplyr
+
+Wickham H, Hester J, Bryan J (2023). readr: Read Rectangular Text Data. https://readr.tidyverse.org, https://github.com/tidyverse/readr.
