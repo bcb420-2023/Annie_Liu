@@ -79,7 +79,7 @@ I used the GSEA like we covered in our homework assignment. IN addition I also u
 
 **Summarize your enrichment results.**
 In the AS to all comparison ranked list, the top five annotations were associated with ion homeostasis and mitochondrial translation initiation. 
-I find the ion homeostasis factor rather interest, as I faintly recall regulations of some charged ions being important in the production of mucus 
+I find the ion homeostasis factor rather interesting, as I faintly recall regulations of some charged ions being important in the production of mucus 
 in the lungs while a symptom of asthma includes over production of mucus. 
 
 I also looked into the AR to all comparison even though not too many genes were significant or passed correction. The top five annotations revolved 
@@ -107,7 +107,7 @@ enrichment analysis of the AS to all group for the rest of this report.
 
 **Create an enrichment map - how many nodes and how many edges in the resulting map? What thresholds were used to create this map? Make sure to record all thresholds. Include a screenshot of your network prior to manual layout.**
 
-There are 457 nodes and 2076 edges in this map under a moderately conservation threshold of p-value < 0.005 and FDR < 0.075. 
+There are 457 nodes and 2076 edges in this map under a moderately conserved threshold of p-value < 0.005 and FDR < 0.075. 
 
 
 ![Fig 3: Raw Enrichment Map of AS to All](./figures/AS_to_ALL.png)
